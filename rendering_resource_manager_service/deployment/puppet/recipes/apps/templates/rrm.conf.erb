@@ -1,0 +1,9 @@
+<% if @static_root %>
+   location /<%= @static_path %> {
+      alias <%= @static_root %>;
+   }
+
+   location /rendering-resource-manager {
+      proxy_pass http://127.0.0.1:<%= @service_port %>
+   }
+<% end %>

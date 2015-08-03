@@ -1,0 +1,34 @@
+import os
+
+SECRET_KEY = '<%= @secret_key %>'
+
+ALLOWED_HOSTS = (
+   'localhost',
+   '127.0.0.1',
+   '<%= @fqdn %>',
+   'visualization-dev.humanbrainproject.eu',
+)
+
+CORS_ORIGIN_WHITELIST = (
+   '127.0.0.1:<%= @service_port %>',
+   'localhost:<%= @service_port %>',
+   '<%= @fqdn %>:<%= @service_port %>',
+   'visualization-dev.humanbrainproject.eu:<%= @service_port %>',
+)
+
+STATIC_URL = '/rrm/static/'
+STATIC_ROOT = '<%= @static_root %>'
+
+APPLICATION_NAME = 'rendering-resource-manager'
+API_VERSION = 'v1'
+
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': os.path.join('/var/' + APPLICATION_NAME, 'db.sqlite3'),
+    }
+}
+
+SLURM_USERNAME = '<%= @slurm_username %>'
+SLURM_PASSWORD = '<%= @slurm_password %>'
+SOCIAL_AUTH_HBP_KEY = '<%= @client_id %>'
