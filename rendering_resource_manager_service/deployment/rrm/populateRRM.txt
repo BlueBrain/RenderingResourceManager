@@ -1,5 +1,5 @@
 # This file gives a list of examples on how to populate the configuration
-# of the rendering ressource manager.
+# of the rendering resource manager.
 
 # Livre
 curl -curl --dump-header - -H "Accept:application/json" -H "Content-Type:application/json" -X POST --data '{"id": "livre", "command_line": "livre", "environment_variables": "", "process_rest_parameters_format": "--use-rest --rest-host ${rest_hostname} --rest-port ${rest_port} --zeq-schema ${rest_schema}", "scheduler_rest_parameters_format": "--use-rest --rest-host $SLURMD_NODENAME --rest-port ${rest_port} --zeq-schema ${rest_schema}", "graceful_exit": "True" }' http://localhost:8383/rendering-resource-manager/v1/config/
@@ -7,8 +7,5 @@ curl -curl --dump-header - -H "Accept:application/json" -H "Content-Type:applica
 # RTNeuron
 curl -curl --dump-header - -H "Accept:application/json" -H "Content-Type:application/json" -X POST --data '{"id": "rtneuron", "command_line": "rtneuron-app.py", "environment_variables": "", "process_rest_parameters_format": "--rest ${rest_hostname}:${rest_port}", "scheduler_rest_parameters_format": "--rest $SLURMD_NODENAME:${rest_port}", "graceful_exit": "True" }' http://localhost:8383/rendering-resource-manager/v1/config/
 
-# Brayns Neuron Viewer
-curl -curl --dump-header - -H "Accept:application/json" -H "Content-Type:application/json" -X POST --data '{"id": "neuronviewer", "command_line": "hbpNeuronViewer", "environment_variables": "", "process_rest_parameters_format": "--rest-hostname ${rest_hostname} --rest-port ${rest_port} --rest-schema ${rest_schema}", "scheduler_rest_parameters_format": "--rest-hostname $SLURMD_NODENAME --rest-port ${rest_port} --rest-schema ${rest_schema}", "graceful_exit": "True" }' http://localhost:8383/rendering-resource-manager/v1/config/
-
-# Brayns Molecule Viewer
-curl -curl --dump-header - -H "Accept:application/json" -H "Content-Type:application/json" -X POST --data '{"id": "proteinviewer", "command_line": "hbpProteinViewer", "environment_variables": "", "process_rest_parameters_format": "--rest-hostname ${rest_hostname} --rest-port ${rest_port} --rest-schema ${rest_schema}", "scheduler_rest_parameters_format": "--rest-hostname $SLURMD_NODENAME --rest-port ${rest_port} --rest-schema ${rest_schema}", "graceful_exit": "True" }' http://localhost:8383/rendering-resource-manager/v1/config/
+# Brayns
+curl -curl --dump-header - -H "Accept:application/json" -H "Content-Type:application/json" -X POST --data '{"id": "brayns", "command_line": "braynsService", "environment_variables": "", "process_rest_parameters_format": "--rest-hostname ${rest_hostname} --rest-port ${rest_port} --rest-schema ${rest_schema}", "scheduler_rest_parameters_format": "--rest-hostname $SLURMD_NODENAME --rest-port ${rest_port} --rest-schema ${rest_schema}", "graceful_exit": "True" }' http://localhost:8383/rendering-resource-manager/v1/config/
