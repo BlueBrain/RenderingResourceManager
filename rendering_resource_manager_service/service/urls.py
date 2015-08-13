@@ -24,6 +24,7 @@ urlpatterns = patterns(
     url(settings.BASE_URL_PREFIX + r'/config.json$',
         'rendering_resource_manager_service.service.views.config'),
     url(settings.BASE_URL_PREFIX + r'/api-docs', include(rest_framework_swagger.urls)),
+    url(settings.BASE_URL_PREFIX + r'/admin', include(admin.site.urls)),
     url(settings.BASE_URL_PREFIX, include(rendering_resource_manager_service.admin.urls)),
     url(settings.BASE_URL_PREFIX, include(rendering_resource_manager_service.config.urls)),
     url(settings.BASE_URL_PREFIX, include(rendering_resource_manager_service.session.urls)),
