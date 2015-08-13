@@ -11,15 +11,23 @@ A service managing rendering resources in order to allow visualization web servi
 ##Installation
 Install python 2.6 or 2.7 , and virtualenv with apt-get and pip
 
+### In the context of the Human Brain Project
 Test execution from source
 ```
+make virtualenv
+. platform_venv/bin/activate
 make test
 ```
 
-Activate virtual environment
+### In any other context
+
 ```
-. platform_venv/bin/activate
+virtualenv env
+. ./env/bin/activate
+pip install -r requirements.txt
 ```
+
+### Initial Configuration
 
 Create database
 ```
@@ -64,4 +72,3 @@ Browse the REST API documentation by opening the following URL in your browser
 ```
 http://localhost:9000/rendering-resource-manager/v1/api-docs
 ```
-
