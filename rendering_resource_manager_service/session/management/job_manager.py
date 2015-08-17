@@ -31,13 +31,8 @@ class JobManager(object):
         """
         Setup saga context, session and service
         """
-
-        self._context = saga.Context('SSH')
-        self._context.user_id = global_settings.SLURM_USERNAME
-        self._context.user_key = global_settings.SLURM_KEY
-        self._context.user_pass = ''
-        self._session = saga.Session()
-        self._session.add_context(self._context)
+        self._context = None
+        self._session = None
         self._service = None
         self._connected = False
         self._mutex = Lock()
@@ -46,11 +41,16 @@ class JobManager(object):
         """
         Utility method to connect to slurm queue, if not already done
         """
-        print 'connecting'
         response = [200, 'Connected']
         self._mutex.acquire()
         if not self._connected:
             try:
+                self._context = saga.Context('SSH')
+                self._context.user_id = global_settings.SLURM_USERNAME
+                self._context.user_key = global_settings.SLURM_KEY
+                self._session = saga.Session()
+                self._session.add_context(self._context)
+
                 url = settings.SLURM_SERVICE_URL
                 self._service = saga.job.Service(rm=url, session=self._session)
                 log.info(1, 'Connected to slurm queue ' + str(self._service.get_url()))
@@ -189,7 +189,6 @@ class JobManager(object):
         :param job_id: The ID of the job
         :return: The hostname of the batch host if the job is running, empty otherwise
         """
-        log.debug(1, global_settings.SLURM_USERNAME + ':' + global_settings.SLURM_PASSWORD)
         job_id_as_int = re.search(r'(?=)-\[(\w+)\]', job_id).group(1)
         log.debug(1, 'Job id as int: ' + str(job_id_as_int))
         result = JobManager.check_output(['ssh', '-i', global_settings.SLURM_KEY,
@@ -300,8 +299,8 @@ class JobManager(object):
         """
         try:
             job_id_as_int = re.search(r'(?=)-\[(\w+)\]', session.job_id).group(1)
-            result = JobManager.check_output(['sshpass', '-p', global_settings.SLURM_PASSWORD,
-                                              'ssh', global_settings.SLURM_USERNAME + '@' +
+            result = JobManager.check_output(['ssh', '-i', global_settings.SLURM_KEY,
+                                              global_settings.SLURM_USERNAME + '@' +
                                               settings.SLURM_HOST, 'scontrol show job',
                                               job_id_as_int])
             return result
@@ -323,8 +322,8 @@ class JobManager(object):
                        str(rr_settings.command_line) + settings.SLURM_ERR_FILE
             filename = filename.replace('%A', str(job_id_as_int), 1)
             result = filename + ':\n'
-            result += JobManager.check_output(['sshpass', '-p', global_settings.SLURM_PASSWORD,
-                                               'ssh', global_settings.SLURM_USERNAME + '@' +
+            result += JobManager.check_output(['ssh', '-i', global_settings.SLURM_KEY,
+                                               global_settings.SLURM_USERNAME + '@' +
                                                settings.SLURM_HOST, 'cat ', filename])
             return result
         except IOError as e:

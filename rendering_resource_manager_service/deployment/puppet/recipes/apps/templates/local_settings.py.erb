@@ -7,6 +7,7 @@ ALLOWED_HOSTS = (
    '127.0.0.1',
    '<%= @fqdn %>',
    'visualization-dev.humanbrainproject.eu',
+   'synthesis-dev.humanbrainproject.eu:<%= @service_port %>',
 )
 
 CORS_ORIGIN_WHITELIST = (
@@ -14,6 +15,7 @@ CORS_ORIGIN_WHITELIST = (
    'localhost:<%= @service_port %>',
    '<%= @fqdn %>:<%= @service_port %>',
    'visualization-dev.humanbrainproject.eu:<%= @service_port %>',
+   'synthesis-dev.humanbrainproject.eu:<%= @service_port %>',
 )
 
 STATIC_URL = '/rrm/static/'
@@ -29,6 +31,6 @@ DATABASES = {
     }
 }
 
-SLURM_USERNAME = '<%= @slurm_username %>'
-SLURM_PASSWORD = '<%= @slurm_password %>'
+SLURM_USERNAME = '<%= @user %>'
+SLURM_KEY = '<%= @home %>/.ssh/id_rsa'
 SOCIAL_AUTH_HBP_KEY = '<%= @client_id %>'

@@ -5,6 +5,9 @@
 This module contains the global constants for the rendering resource manager
 """
 
+import rendering_resource_manager_service.service.settings as global_settings
+
+
 # HTTP Cookie ID
 COOKIE_ID = "HBP"
 
@@ -40,8 +43,9 @@ SLURM_HOST = 'bbpviz1' + SLURM_HOST_DOMAIN
 SLURM_SERVICE_URL = 'slurm+ssh://' + SLURM_HOST
 SLURM_JOB_NAME_PREFIX = 'VWS_'
 SLURM_QUEUE = 'interactive'
-SLURM_PROJECT = 'proj3'
-SLURM_OUTPUT_PREFIX = '/gpfs/bbp.cscs.ch/project/proj3/tmp/vws_%A_'
+SLURM_PROJECT = 'proj49'
+SLURM_OUTPUT_PREFIX = '/gpfs/bbp.cscs.ch/home/' + global_settings.SLURM_USERNAME +\
+                      '/var/log/vws_%A_'
 SLURM_ERR_FILE = '_err.txt'
 SLURM_OUT_FILE = '_out.txt'
 SLURM_DEFAULT_MODULE = 'BBP/viz/latest'
