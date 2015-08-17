@@ -17,12 +17,15 @@
 #
 # Copyright (c) 2014, EPFL/Blue Brain Project
 #
-class apps::visualization::rrm{
+class apps::visualization::rrm (
+  $user,
+  $group,
+  $home,
+){
   include ::apps
   include ::supervisor
   include ::repo::epel
   include ::repo::bbp  # need this for the user_gid for the supervisor user
-  include ::user::localservice
   include ::sqlite
   include ::nodejs
   include ::apps::python
@@ -38,11 +41,6 @@ class apps::visualization::rrm{
   $upstream_name      = 'rendering-resource-manager'
   $service_port       = '8383'
 
-  ## user configuration
-  $user_name  = 'localservice'
-  $user_group = 'localservice'
-  $user_home  = "/home/${user_name}"
-
   $pymodule    = 'rendering_resource_manager_service'
   $bbp_pypi    = hiera("bbp_pypi::${::environment}")
   $app_dir     = "/opt/${pymodule}"
@@ -55,7 +53,6 @@ class apps::visualization::rrm{
   $slurm_username = hiera('rrm::slurm_username')
   $slurm_password = hiera('rrm::slurm_password')
   $client_id = hiera('rrm::client_id')
-  $ui_base_url = hiera('rrm::ui_base_url')
   $static_root = "${app_dir}/static/"
   $static_path = 'rrm/static/'
   $back_version = hiera('rrm::back_version')
@@ -71,13 +68,14 @@ class apps::visualization::rrm{
   $dynamic_asset_expires = hiera('rrm::server::dynamic_asset_expires')
   $port                  = hiera('rrm::server::port')
   $listen_options        = hiera('rrm::server::listen_options')
+  $config                = hiera('rrm::config::visualization')
   #for NPM package
   $front_version = hiera('rrm::front_version')
 
 
   python::virtualenv { $virtualenv :
     ensure  => present,
-    owner   => $user_name,
+    owner   => $user,
     require => [File[$app_dir],
                 ],
   }
@@ -102,18 +100,16 @@ class apps::visualization::rrm{
   }
 
   file { $app_dir:
-    ensure  => directory,
-    owner   => $user_name,
-    group   => $user_group,
-    mode    => '0755',
-    require => [Class['::user::localservice'],
-                ]
+    ensure => directory,
+    owner  => $user,
+    group  => $group,
+    mode   => '0755',
   }
 
   file { $db_dir:
     ensure  => directory,
-    owner   => $user_name,
-    group   => $user_group,
+    owner   => $user,
+    group   => $group,
     mode    => '0755',
     require => [File[$app_dir],
                 ],
@@ -121,8 +117,8 @@ class apps::visualization::rrm{
 
   file { $static_root:
     ensure  => directory,
-    owner   => $user_name,
-    group   => $user_group,
+    owner   => $user,
+    group   => $group,
     mode    => '0755',
     require => [File[$app_dir],
                 ]
@@ -131,8 +127,8 @@ class apps::visualization::rrm{
   file { 'local_settings':
     ensure  => present,
     path    => "${virtualenv}/lib/python2.6/site-packages/${pymodule}/local_settings.py",
-    owner   => $user_name,
-    group   => $user_group,
+    owner   => $user,
+    group   => $group,
     mode    => '0644',
     replace => true,
     content => template("${module_name}/rrm/local_settings.py.erb"),
@@ -144,7 +140,7 @@ class apps::visualization::rrm{
     command => "python ${virtualenv}/lib/python2.6/site-packages/${pymodule}/manage.py syncdb --noinput",
     path    => $module_bin,
     cwd     => $virtualenv,
-    user    => $user_name,
+    user    => $user,
     timeout => 0,
     require => [File['local_settings'],
                 File[$db_dir]
@@ -163,14 +159,8 @@ class apps::visualization::rrm{
     require => Supervisor::Service['rrm']
   }
 
-  exec { 'setup_db_config_hbpNeuronViewer':
-    command => "curl -curl --dump-header - -H \"Accept:application/json\" -H \"Content-Type:application/json\" -X POST --data \'{\"id\": \"hbpneuronviewer\", \"command_line\": \"hbpNeuronViewer\", \"environment_variables\": \"\", \"process_rest_parameters_format\": \"--rest-hostname \${rest_hostname} --rest-port \${rest_port} --rest-schema \${rest_schema}\", \"scheduler_rest_parameters_format\": \"--rest-hostname \$SLURMD_NODENAME --rest-port \${rest_port} --rest-schema \${rest_schema}\", \"graceful_exit\": \"True\" }\' http://localhost:${service_port}/${service_name}/config/",
-    path    => '/usr/bin/',
-    require => Supervisor::Service['rrm']
-  }
-
-  exec { 'setup_db_config_hbpProteinViewer':
-    command => "curl -curl --dump-header - -H \"Accept:application/json\" -H \"Content-Type:application/json\" -X POST --data \'{\"id\": \"hbpproteinviewer\", \"command_line\": \"hbpProteinViewer\", \"environment_variables\": \"\", \"process_rest_parameters_format\": \"--rest-hostname \${rest_hostname} --rest-port \${rest_port} --rest-schema \${rest_schema}\", \"scheduler_rest_parameters_format\": \"--rest-hostname \$SLURMD_NODENAME --rest-port \${rest_port} --rest-schema \${rest_schema}\", \"graceful_exit\": \"True\" }\' http://localhost:${service_port}/${service_name}/config/",
+  exec { 'setup_db_config_BRayns':
+    command => "curl -curl --dump-header - -H \"Accept:application/json\" -H \"Content-Type:application/json\" -X POST --data \'{\"id\": \"braynsService\", \"command_line\": \"braynsService\", \"environment_variables\": \"\", \"process_rest_parameters_format\": \"--rest-hostname \${rest_hostname} --rest-port \${rest_port} --rest-schema \${rest_schema}\", \"scheduler_rest_parameters_format\": \"--rest-hostname \$SLURMD_NODENAME --rest-port \${rest_port} --rest-schema \${rest_schema}\", \"graceful_exit\": \"True\" }\' http://localhost:${service_port}/${service_name}/config/",
     path    => '/usr/bin/',
     require => Supervisor::Service['rrm']
   }
@@ -178,7 +168,7 @@ class apps::visualization::rrm{
   exec { "collectstatic_${pymodule}":
     command => "python ${virtualenv}/lib/python2.6/site-packages/${pymodule}/manage.py collectstatic --noinput",
     path    => $module_bin,
-    user    => $user_name,
+    user    => $user,
     timeout => 0,
     require => [File[$static_root],
                 File['local_settings'],
@@ -192,11 +182,11 @@ class apps::visualization::rrm{
     command     => "${module_bin}/gunicorn \
                     ${pymodule}.service.wsgi \
                     -b 127.0.0.1:${service_port} --log-level debug --log-file - ",
-    user        => $user_name,
-    group       => $user_group,
+    user        => $user,
+    group       => $group,
     directory   => $virtualenv,
-    environment => "HOME=/home/${user_name},USER=${user_name},\
-LOGNAME=${user_name},PWD=${virtualenv}",
+    environment => "HOME=${home},USER=${user},\
+LOGNAME=${user},PWD=${virtualenv}",
     require     => [Python::Pip[$pymodule],
                     Python::Pip['gunicorn'],
                     Class['::repo::bbp'],
@@ -211,12 +201,9 @@ LOGNAME=${user_name},PWD=${virtualenv}",
   file { $nginx_lua_conf:
     ensure  => present,
     path    => $nginx_lua_conf,
-    owner   => $user_name,
-    group   => $user_group,
+    owner   => $user,
+    group   => $group,
     content => template('apps/viz-nosecurity-nginx-common.conf.erb'),
-    require => [
-        Class['::user::localservice']
-    ],
     notify  => Service['nginx-lua'],
   }
 
@@ -276,13 +263,6 @@ LOGNAME=${user_name},PWD=${virtualenv}",
     install_opt => "--registry ${registry}"
   }
 
-  # Create configuration file using data in hiera ( will need later )
-  file { "${www_root}/config.json":
-    ensure  => file,
-    content => fact_to_json(hiera('bbp::config::platform')),
-    require => Nodejs::Npm["${path}:${pkgname}"]
-  }
-
   # This vhost should respond to any request (IP, localhost, dnsname.epfl.ch)
   nginx::resource::vhost { 'jsvizviewer':
     ensure              => present,
@@ -307,5 +287,12 @@ LOGNAME=${user_name},PWD=${virtualenv}",
     location_cfg_append => {
       proxy_pass => "http://127.0.0.1:${service_port}",
     }
+  }
+
+  # Create configuration file using data in hiera.
+  file { "${www_root}/config.json":
+    ensure  => file,
+    content => fact_to_json($config),
+    require => Nodejs::Npm["${path}:${pkgname}"]
   }
 }
