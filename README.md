@@ -29,11 +29,14 @@ pip install -r requirements.txt
 
 ### Initial Configuration
 
-Create database
+Create the database.
 ```
+export PYTHONPATH=$PWD:$PYTHONPATH
 cd rendering_resource_manager_service
 python manage.py syncdb
 ```
+
+Defining a user allows configuration via the admin web interface.
 
 ##Setup the Slurm username account and password
 When starting rendering resources on a cluster, a specific account is required. The credentials for this account are defined in the service/settings.py file

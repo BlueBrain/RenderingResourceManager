@@ -14,7 +14,8 @@ import json
 
 from django.db import IntegrityError, transaction
 from django.http import HttpResponse
-from rendering_resource_manager_service.session.models import Session, SystemGlobalSettings, \
+from rendering_resource_manager_service.config.models import SystemGlobalSettings
+from rendering_resource_manager_service.session.models import Session, \
     SESSION_STATUS_STOPPED, SESSION_STATUS_SCHEDULED, SESSION_STATUS_STARTING, \
     SESSION_STATUS_RUNNING, SESSION_STATUS_STOPPING
 from rest_framework.renderers import JSONRenderer

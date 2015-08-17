@@ -61,6 +61,7 @@ INSTALLED_APPS = (
 
 MIDDLEWARE_CLASSES = (
     'django.contrib.sessions.middleware.SessionMiddleware',
+    'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
@@ -72,9 +73,9 @@ MIDDLEWARE_CLASSES = (
 CORS_ORIGIN_ALLOW_ALL = False
 CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_WHITELIST = (
-    'localhost:8095',
-    '127.0.0.1:8095',
-    '0.0.0.0:8095',
+    'localhost:8092',
+    '127.0.0.1:8092',
+    '0.0.0.0:8092',
 )
 
 
@@ -151,7 +152,7 @@ sys.path.append(BASE_DIR + '/rendering_resource_manager_service')
 
 # Slurm credentials (To be modified by deployment process)
 SLURM_USERNAME = 'TO_BE_MODIFIED'
-SLURM_PASSWORD = 'TO_BE_MODIFIED'
+SLURM_KEY = 'TO_BE_MODIFIED'
 
 # ClientID needed by the HBP collab project browser
 SOCIAL_AUTH_HBP_KEY = 'TO_BE_MODIFIED'

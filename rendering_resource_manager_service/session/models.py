@@ -43,24 +43,3 @@ class Session(models.Model):
         return '%s, %s' % (self.owner, self.renderer_id)
 
     __unicode__ = __str__
-
-
-class SystemGlobalSettings(models.Model):
-    """
-    Persistent Global Settings
-    """
-
-    id = models.IntegerField(primary_key=True, default=0)
-    session_creation = models.BooleanField(default=True)
-    session_keep_alive_timeout = models.IntegerField(default=1000)
-
-    class Meta(object):
-        """
-        A Meta object for the Session
-        """
-        ordering = ('id', 'session_creation', 'session_keep_alive_timeout')
-
-    def __str__(self):
-        return '%s, %s' % (self.session_creation, self.session_keep_alive_timeout)
-
-    __unicode__ = __str__

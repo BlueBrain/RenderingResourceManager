@@ -32,9 +32,10 @@ class JobManager(object):
         Setup saga context, session and service
         """
 
-        self._context = saga.Context('UserPass')
+        self._context = saga.Context('SSH')
         self._context.user_id = global_settings.SLURM_USERNAME
-        self._context.user_pass = global_settings.SLURM_PASSWORD
+        self._context.user_key = global_settings.SLURM_KEY
+        self._context.user_pass = ''
         self._session = saga.Session()
         self._session.add_context(self._context)
         self._service = None
@@ -45,6 +46,7 @@ class JobManager(object):
         """
         Utility method to connect to slurm queue, if not already done
         """
+        print 'connecting'
         response = [200, 'Connected']
         self._mutex.acquire()
         if not self._connected:
@@ -190,7 +192,7 @@ class JobManager(object):
         log.debug(1, global_settings.SLURM_USERNAME + ':' + global_settings.SLURM_PASSWORD)
         job_id_as_int = re.search(r'(?=)-\[(\w+)\]', job_id).group(1)
         log.debug(1, 'Job id as int: ' + str(job_id_as_int))
-        result = JobManager.check_output(['sshpass', '-p', global_settings.SLURM_PASSWORD, 'ssh',
+        result = JobManager.check_output(['ssh', '-i', global_settings.SLURM_KEY,
                                           global_settings.SLURM_USERNAME + '@' +
                                           settings.SLURM_HOST, 'scontrol show job', job_id_as_int])
         log.info(1, str(result))
