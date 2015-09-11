@@ -1,0 +1,8 @@
+{
+  "name": "viz-render-viewer",
+  "version": "0.1.19",
+  "dependencies": {
+    "threejs": "r64"
+  }
+}
+

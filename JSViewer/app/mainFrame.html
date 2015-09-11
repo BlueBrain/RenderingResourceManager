@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<meta charset="utf-8">
+
+<body bgcolor="#000">
+    <div id="container">
+        <div align="center">
+            <img id="renderedImage" border="0" align="middle">
+        </div>
+    </div>
+
+    <!-- build:js({.,app}) scripts/framevendor.js -->
+    <!-- bower:js -->
+    <script src="bower_components/threejs/build/three.js"></script>
+    <!-- endbower -->
+    <script src="scripts/lib/TrackballControls.js"></script>
+    <script src="scripts/lib/Detector.js"></script>
+    <!-- endbuild -->
+
+    <!-- build:js(app) scripts/frameapp.js -->
+    <script src="scripts/frame.js"></script>
+    <!-- endbuild -->
+
+</body>
+
+</html>

@@ -1,0 +1,6 @@
+{
+  "api":
+  {
+    "v1": "http://localhost:8383/rendering-resource-manager/v1"
+  }
+}
