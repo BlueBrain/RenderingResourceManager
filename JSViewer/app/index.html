@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head class="one">
+    <title>Visualization Web Services</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
+
+    <!-- build:css(app) css/main.css -->
+    <link rel="stylesheet" href="css/main.css" />
+    <!-- endbuild -->
+
+</head>
+
+<body class="head">
+    <div id="errorDiv">
+        <span id="errorMessage"></span>
+    </div>
+    <iframe name="mainFrame" id="mainFrame" src="mainFrame.html" width="100%" height="400" frameBorder="0"></iframe>
+    <table class="imagetable" width="99%">
+        <tr>
+            <td align=left width="75%">
+                <b>Application Parameters:</b>
+            </td>
+        </tr>
+        <tr>
+                <table>
+                    <tr>
+                        <td align=left><b>Renderer:</b>
+                        </td>
+                        <td align=left>
+                            <select name="renderer" id="renderer" class="dropdown">
+                                <option value="none">None</option>
+                                <option value="brayns">CPU-based ray-tracing</option>
+                                <option value="livre">Volume Rendering</option>
+                                <option value="rtneuron">Rasterization</option>
+                            </select>
+                            <select name="snapshotresolution" id="snapshotresolution" class="dropdown">
+                                <option value="1k">1K (960x540)</option>
+                                <option value="2k">2K (1920x1080)</option>
+                                <option value="4k">4K (3840x2160)</option>
+                                <option value="dw">Display Wall (7680x3240)</option>
+                            </select>
+                            <input id="btnRender" type="button" value="Render" />
+                            <input id="btnSnapshot" type="button" value="Snapshot" disabled/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align=left><b>Data source:</b>
+                        </td>
+                        <td align=left>
+                            <select name="datasourcetype" id="datasourcetype" class="dropdown">
+                                <option value="unknown">-</option>
+                                <option value="h5">h5</option>
+                                <option value="swc">swc</option>
+                                <option value="bbic">bbic</option>
+                                <option value="uvf">uvf</option>
+                                <option value="pdb">pdb</option>
+                                <option value="fivoxvsd">fivoxvsd</option>
+                                <option value="mesh">mesh</option>
+                                <option value="BlueConfig">BlueConfig</option>
+                            </select>
+                            <input type="text" id="datasource" size=46 value="" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align=left><b>Parameters:</b>
+                        </td>
+                        <td align=left>
+                            <input type="text" id="params" size=60 value="" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align=left><b>Environment:</b>
+                        </td>
+                        <td align=left>
+                            <input type="text" id="environment" size=60 value="" />
+                        </td>
+                    </tr>
+                    <tr>
+                        <td align=left><b>Options:</b>
+                        </td>
+                        <td align=left>
+                            <input type="checkbox" name="AmbientOcclusion" id="ambientocclusion" disabled="true">Ambient occlusion</input>
+                            <input type="checkbox" name="Shading" id="shading" checked disabled="true">Shading</input>
+                            <input type="checkbox" name="SoftShadows" id="softshadows" checked disabled="true">Shadows</input>
+                            <input type="checkbox" name="ProducionQuality" id="productionquality">Production Quality</input>
+                            <input type="checkbox" name="ElectronShading" id="electronshading">Electron Shading</input>
+                            <input type="checkbox" name="ContinuousRendering" id="continuousrendering">Continuous Rendering</input>
+                        </td>
+                    </tr>
+                </table>
+        </tr>
+    </table>
+    <table class="imagetable" width="99%">
+        <div>
+            <font size="0.5"><p id="vocabulary"></p></font>
+        </div>
+        <div>
+            <font size="0.5"><p id="sessionstatus" align="center"> </p></font>
+        </div>
+    </table>
+    <table class="imagetable" width="99%">
+        <tr>
+            <td>
+                Log:
+            </td>
+            <td>
+                <span class="info" id='renderingresourceidlog'></span>
+            </td>
+        </tr>
+    </table>
+    <br/>
+    <!-- build:js(app) scripts/app.js -->
+    <script src="scripts/main.js"></script>
+    <!-- endbuild -->
+
+</body>
+
+</html>
