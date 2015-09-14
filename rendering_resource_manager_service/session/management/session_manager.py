@@ -275,17 +275,22 @@ class SessionManager(object):
                     session.status = SESSION_STATUS_RUNNING
                     session.save()
                 else:
-                    # Check job existence
-                    hostname = job_manager.globalJobManager.hostname(session.job_id)
-                    if hostname == '':
-                        session.delete()
-                        status_description = \
-                            str(session.renderer_id +
-                                ' bas been cancelled. Session will be deleted' + status[1])
-
+                    if session.job_id == '':
+                        hostname = 'localhost'
+                        status_description = str(session.renderer_id + ' is starting... ')
                     else:
-                        status_description = str(session.renderer_id + ' is starting... ' +
-                                                 status[1])
+                        # Check job existence
+                        hostname = job_manager.globalJobManager.hostname(session.job_id)
+                        if hostname == '':
+                            session.delete()
+                            status_description = \
+                                str(session.renderer_id +
+                                    ' bas been cancelled. Session will be deleted' + status[1])
+
+                        else:
+                            status_description = str(session.renderer_id + ' is starting... ' +
+                                                     status[1])
+
             elif session_status == SESSION_STATUS_STOPPING:
                 # Rendering resource is currently in the process of terminating.
                 status_description = str(session.renderer_id + ' is terminating...')

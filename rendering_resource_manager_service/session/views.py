@@ -19,6 +19,7 @@ import management.session_manager_settings as consts
 import rendering_resource_manager_service.utils.custom_logging as log
 from rendering_resource_manager_service.session.models import Session
 from rendering_resource_manager_service.session.management import job_manager
+from rendering_resource_manager_service.session.management import process_manager
 import management.session_manager as session_manager
 
 
@@ -227,7 +228,7 @@ class CommandViewSet(viewsets.ModelViewSet):
             if command == 'schedule':
                 response = cls.__schedule_job(session, parameters, environment)
             elif command == 'open':
-                response = cls.__open_process(session, parameters)
+                response = cls.__open_process(session, parameters, environment)
             elif command == 'status':
                 status = cls.__session_status(session)
                 response = HttpResponse(status=status[0], content=status[1])
@@ -262,7 +263,7 @@ class CommandViewSet(viewsets.ModelViewSet):
         return HttpResponse(status=status[0], content=status[1])
 
     @classmethod
-    def __open_process(cls, session, parameters):
+    def __open_process(cls, session, parameters, environment):
         """
         Starts a local rendering resource process
         :param : session: Session holding the rendering resource
@@ -273,7 +274,8 @@ class CommandViewSet(viewsets.ModelViewSet):
         if session.process_pid == -1:
             session.http_host = consts.DEFAULT_RENDERER_HOST
             session.http_port = consts.DEFAULT_RENDERER_HTTP_PORT + random.randint(0, 1000)
-            status = job_manager.globalJobManager.start(session, parameters)
+            pm = process_manager.ProcessManager
+            status = pm.start(session, parameters, environment)
             session.save()
             return HttpResponse(status=status[0], content=status[1])
         else:
