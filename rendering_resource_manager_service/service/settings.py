@@ -22,7 +22,7 @@ APPLICATION_NAME = 'rendering-resource-manager'
 API_VERSION = 'v1'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 TEMPLATE_DEBUG = False
 
@@ -73,9 +73,9 @@ MIDDLEWARE_CLASSES = (
 CORS_ORIGIN_ALLOW_ALL = False
 CORS_ALLOW_CREDENTIALS = True
 CORS_ORIGIN_WHITELIST = (
-    'localhost:8092',
-    '127.0.0.1:8092',
-    '0.0.0.0:8092',
+    'localhost:8095',
+    '127.0.0.1:8095',
+    '0.0.0.0:8095',
 )
 
 

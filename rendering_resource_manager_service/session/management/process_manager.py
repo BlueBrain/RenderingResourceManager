@@ -27,7 +27,7 @@ class ProcessManager(object):
 
     # Stop Process
     @staticmethod
-    def start(session_info, params):
+    def start(session_info, params, environment):
         """
         Gently starts a given process, waits for 2 seconds and checks for its appearance
         :param session_info: Session information containing the PID of the process
@@ -36,14 +36,24 @@ class ProcessManager(object):
         try:
             settings = manager.RenderingResourceSettingsManager.get_by_id(
                 session_info.renderer_id.lower())
-            rest_parameters = manager.RenderingResourceSettingsManager.format_rest_parameters(
+            default_parameters = manager.RenderingResourceSettingsManager.format_rest_parameters(
                 str(settings.process_rest_parameters_format),
                 str(session_info.http_host),
                 str(session_info.http_port),
                 'rest' + str(settings.id + session_info.id))
+
             command_line = [
                 str(settings.command_line)
-            ] + rest_parameters.split() + str(params['params']).split()
+            ] + default_parameters.split()
+            try:
+                command_line += str(params).split()
+            except KeyError:
+                log.debug(1, 'No parameters specified')
+            except TypeError:
+                log.debug(1, 'No parameters specified')
+
+            environment_variables = settings.environment_variables.split()
+            environment_variables.append(environment)
 
             log.info(1, 'Launching ' + settings.id + ' with ' + str(command_line))
             process = subprocess.Popen(
