@@ -255,6 +255,12 @@ class CommandViewSet(viewsets.ModelViewSet):
             elif command == 'log':
                 status = cls.__rendering_resource_log(session)
                 response = HttpResponse(status=status[0], content=status[1])
+            elif command == 'err':
+                status = cls.__rendering_resource_err(session)
+                response = HttpResponse(status=status[0], content=status[1])
+            elif command == 'job':
+                status = cls.__job_information(session)
+                response = HttpResponse(status=status[0], content=status[1])
             else:
                 response = cls.__forward_request(session, command, request)
             return response
@@ -350,7 +356,7 @@ class CommandViewSet(viewsets.ModelViewSet):
         return [200, 'Job is running on host ' + session.http_host]
 
     @classmethod
-    def __rendering_resource_log(cls, session):
+    def __rendering_resource_out_log(cls, session):
         """
         Forwards the HTTP request to the rendering resource held by the given session
         :param : session: Session holding the rendering resource
@@ -359,7 +365,33 @@ class CommandViewSet(viewsets.ModelViewSet):
         # check if the hostname of the rendering resource is currently available
         contents = ''
         if session.job_id:
-            contents = job_manager.globalJobManager.rendering_resource_log(session)
+            contents = job_manager.globalJobManager.rendering_resource_out_log(session)
+        return [200, contents]
+
+    @classmethod
+    def __rendering_resource_err_log(cls, session):
+        """
+        Forwards the HTTP request to the rendering resource held by the given session
+        :param : session: Session holding the rendering resource
+        :rtype : An HTTP response containing the status and description of the command
+        """
+        # check if the hostname of the rendering resource is currently available
+        contents = ''
+        if session.job_id:
+            contents = job_manager.globalJobManager.rendering_resource_err_log(session)
+        return [200, contents]
+
+    @classmethod
+    def __job_information(cls, session):
+        """
+        Forwards the HTTP request to the rendering resource held by the given session
+        :param : session: Session holding the rendering resource
+        :rtype : An HTTP response containing the status and description of the command
+        """
+        # check if the hostname of the rendering resource is currently available
+        contents = ''
+        if session.job_id:
+            contents = job_manager.globalJobManager.job_information(session)
         return [200, contents]
 
     @classmethod
