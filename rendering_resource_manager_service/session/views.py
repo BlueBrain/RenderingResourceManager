@@ -253,10 +253,10 @@ class CommandViewSet(viewsets.ModelViewSet):
                 status = cls.__session_status(session)
                 response = HttpResponse(status=status[0], content=status[1])
             elif command == 'log':
-                status = cls.__rendering_resource_log(session)
+                status = cls.__rendering_resource_out_log(session)
                 response = HttpResponse(status=status[0], content=status[1])
             elif command == 'err':
-                status = cls.__rendering_resource_err(session)
+                status = cls.__rendering_resource_err_log(session)
                 response = HttpResponse(status=status[0], content=status[1])
             elif command == 'job':
                 status = cls.__job_information(session)
