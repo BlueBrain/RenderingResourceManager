@@ -329,9 +329,9 @@ class JobManager(object):
             return str(e)
 
     @staticmethod
-    def rendering_resource_log(session):
+    def rendering_resource_log(session, filename):
         """
-        Returns the contents of the rendering resource error file
+        Returns the contents of the specified file
         :param session: the session to be queried
         :return: A string containing the error log
         """
@@ -340,7 +340,7 @@ class JobManager(object):
             rr_settings = \
                 manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
             filename = settings.SLURM_OUTPUT_PREFIX + \
-                       str(rr_settings.command_line) + settings.SLURM_ERR_FILE
+                       str(rr_settings.command_line) + filename
             filename = filename.replace('%A', str(job_id_as_int), 1)
             result = filename + ':\n'
             result += JobManager.check_output(['ssh', '-i', global_settings.SLURM_KEY,
@@ -349,6 +349,24 @@ class JobManager(object):
             return result
         except IOError as e:
             return str(e)
+
+    @staticmethod
+    def rendering_resource_out_log(session):
+        """
+        Returns the contents of the rendering resource output file
+        :param session: the session to be queried
+        :return: A string containing the error log
+        """
+        return globalJobManager.rendering_resource_log(session, settings.SLURM_OUT_FILE)
+
+    @staticmethod
+    def rendering_resource_err_log(session):
+        """
+        Returns the contents of the rendering resource error file
+        :param session: the session to be queried
+        :return: A string containing the error log
+        """
+        return globalJobManager.rendering_resource_log(session, settings.SLURM_ERR_FILE)
 
 # Global job manager used for all allocations
 globalJobManager = JobManager()
