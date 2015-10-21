@@ -180,6 +180,9 @@ SLURM_KEY = 'TO_BE_MODIFIED'
 # ClientID needed by the HBP collab project browser
 SOCIAL_AUTH_HBP_KEY = 'TO_BE_MODIFIED'
 
+# Image Streaming Service URL
+IMAGE_STREAMING_SERVICE_URL = 'TO_BE_MODIFIED'
+
 try:
     from local_settings import * # pylint: disable=F0401,W0403,W0401,W0614
 except ImportError as e:
