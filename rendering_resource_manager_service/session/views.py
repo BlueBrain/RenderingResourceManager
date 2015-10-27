@@ -37,9 +37,11 @@ from rest_framework import serializers, viewsets
 from django.http import HttpResponse
 import management.session_manager_settings as consts
 import rendering_resource_manager_service.utils.custom_logging as log
+import rendering_resource_manager_service.utils.tools as tools
 from rendering_resource_manager_service.session.models import Session
 from rendering_resource_manager_service.session.management import job_manager
 from rendering_resource_manager_service.session.management import process_manager
+from rendering_resource_manager_service.session.management import image_feed_manager
 import management.session_manager as session_manager
 
 
@@ -205,6 +207,10 @@ class SessionViewSet(viewsets.ModelViewSet):
         """
         sm = session_manager.SessionManager()
         session_id = sm.get_session_id_from_request(request)
+        # remove image feed route if it exists
+        ifm = image_feed_manager.ImageFeedManager(request, session_id)
+        ifm.remove_route()
+        # remove session from db
         status = sm.delete_session(session_id)
         return HttpResponse(status=status[0], content=status[1])
 
@@ -261,6 +267,9 @@ class CommandViewSet(viewsets.ModelViewSet):
             elif command == 'job':
                 status = cls.__job_information(session)
                 response = HttpResponse(status=status[0], content=status[1])
+            elif command == 'imagefeed':
+                status = cls.__image_feed(session_id, request)
+                response = HttpResponse(status=status[0], content=status[1])
             else:
                 response = cls.__forward_request(session, command, request)
             return response
@@ -308,25 +317,6 @@ class CommandViewSet(viewsets.ModelViewSet):
             msg = 'process is already started'
             log.error(msg)
             return HttpResponse(status=401, content=msg)
-
-    @classmethod
-    def __get_request_headers(cls, request):
-        """
-        Reads headers from given http request and returns them as a dictionary
-        :param request: HTTP request to be processed
-        :return: Dictionary of header values
-        """
-        def format_header_name(name):
-            """
-            Formats an http parameters to suit dictionaries requirements
-            :param name: name of the http parameter
-            :return: Formatted header parameter
-            """
-            return "-".join([x[0].upper() + x[1:] for x in name[5:].lower().split("_")])
-        headers = dict([(format_header_name(k), v) for k, v in request.META.items()
-                        if k.startswith("HTTP_")])
-        headers["Cookie"] = "; ".join([k + "=" + v for k, v in request.COOKIES.items()])
-        return headers
 
     @classmethod
     def __verify_hostname(cls, session):
@@ -418,6 +408,11 @@ class CommandViewSet(viewsets.ModelViewSet):
             return status
 
     @classmethod
+    def __image_feed(cls, session_id, request):
+        ifm = image_feed_manager.ImageFeedManager(request, session_id)
+        return ifm.get_route()
+
+    @classmethod
     def __forward_request(cls, session, command, request):
         """
         Forwards the HTTP request to the rendering resource held by the given session
@@ -436,7 +431,7 @@ class CommandViewSet(viewsets.ModelViewSet):
             # Any other command is forwarded to the rendering resource
             url = 'http://' + session.http_host + ':' + str(session.http_port) + '/' + command
             log.info(1, 'Querying ' + str(url))
-            headers = cls.__get_request_headers(request)
+            headers = tools.get_request_headers(request)
 
             input_data = None
             if request.DATA:

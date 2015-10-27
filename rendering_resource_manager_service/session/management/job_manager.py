@@ -105,9 +105,9 @@ class JobManager(object):
             environment_variables.append(environment)
             log.info(1, 'Scheduling job: ' +
                      str(rr_settings.command_line) + ' ' + str(parameters) + ', ' +
-                     str(rr_settings.environment_variables) + ' ' + str(environment_variables))
+                     str(environment_variables))
             session.job_id = self.create_job(
-                str(rr_settings.command_line), parameters, environment)
+                str(rr_settings.command_line), parameters, environment_variables)
             session.status = SESSION_STATUS_SCHEDULED
             session.save()
             return [200, 'Job ' + str(session.job_id) + ' now scheduled']
@@ -143,9 +143,17 @@ class JobManager(object):
         description.project = settings.SLURM_PROJECT
         description.output = settings.SLURM_OUTPUT_PREFIX + executable + settings.SLURM_OUT_FILE
         description.error = settings.SLURM_OUTPUT_PREFIX + executable + settings.SLURM_ERR_FILE
-        if len(environment) > 0:
-            description.environment = environment
 
+        # Add environment variables
+        environment_variables = ''
+        for variable in environment:
+            variable = variable.strip()
+            if variable != '':
+                environment_variables = environment_variables + variable + ' '
+        if environment_variables != '':
+            description.environment = environment_variables
+
+        # Create job
         log.info(1, 'About to submit job for ' + executable)
         job = self._service.create_job(description)
         job.run()

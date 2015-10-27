@@ -95,14 +95,18 @@ var statusQuery = setInterval(function () {
                 var continuousRendering = parent.document.getElementById('continuousrendering').checked;
                 if (!firstImageRetrieved || continuousRendering) {
                     positionChangeCounter = 0;
-                    getImage();
+                    //getImage();
                     doRequest('GET', serviceUrl + '/session/vocabulary', function (event) {
                         if (event.target.status === 200) {
                             parent.document.getElementById('btnSnapshot').disabled = false;
-                            /*
-                            var voc = parent.document.getElementById('vocabulary');
-                            voc.innerHTML = event.target.responseText;
-                            */
+                            // Application is now available.
+                            // Request for image streaming
+                            doRequest('GET', serviceUrl + '/session/imagefeed', function (event) {
+                                console.log('Image streaming from ' + event.target.responseText)
+                                var obj = JSON.parse(event.target.responseText);
+                                renderedImage.src = obj.uri
+                                firstImageRetrieved = true;
+                            });
                         }
                     });
 
@@ -211,8 +215,8 @@ function startRenderer(event) {
             if (parameters.indexOf('buffer-height') === -1) {
                 parameters += ' --buffer-height ' + height;
             }
-            if (parameters.indexOf('window-width') === -1) {
-                parameters += ' --window-width ' + width;
+            if (parameters.indexOf('buffer-width') === -1) {
+                parameters += ' --buffer-width ' + width;
             }
         } else {
             if (environment.indexOf('EQ_WINDOW_IATTR_HINT_HEIGHT') === -1) {
@@ -224,7 +228,6 @@ function startRenderer(event) {
                 environment += 'EQ_WINDOW_IATTR_HINT_WIDTH=' + width;
             }
         }
-
 
         var rendererParams = {
             params: parameters,
@@ -300,17 +303,17 @@ Number.prototype.toFixedDown = function (digits) {
  *positon change callback.
  */
 function render() {
-    if (openSessionParams.renderer_id == "brayns") {
-        cameraMatrix.matrix[0] = -camera.position.x;
-        cameraMatrix.matrix[1] = camera.position.y;
-        cameraMatrix.matrix[2] = -camera.position.z;
-    } else {
-        // Rotation
-        var scaling = 1;
-        if (openSessionParams.renderer_id === "rtneuron") {
-            scaling = 1000;
-        }
-        if (camera.position.z != 0.0) {
+    if (camera.position.z != 0.0) {
+        if (openSessionParams.renderer_id == "brayns") {
+            cameraMatrix.matrix[0] = -camera.position.x;
+            cameraMatrix.matrix[1] = camera.position.y;
+            cameraMatrix.matrix[2] = -camera.position.z;
+        } else {
+            // Rotation
+            var scaling = 1;
+            if (openSessionParams.renderer_id === "rtneuron") {
+                scaling = 1000;
+            }
             var alpha = -Math.asin(camera.position.x / camera.position.z);
             var beta = Math.asin(camera.position.y / camera.position.z);
 
@@ -341,15 +344,7 @@ function render() {
             }
         }
     }
-
-    if (sessionStatus === SESSION_STATUS_RUNNING) {
-        doRequest('PUT', serviceUrl + '/session/CAMERA', function () {}, cameraMatrix);
-        if (positionChangeCounter++ % 20 === 0 && !rendering) {
-            rendering = true;
-            getImage();
-            rendering = false;
-        }
-    }
+    doRequest('PUT', serviceUrl + '/session/CAMERA', function () {}, cameraMatrix);
 }
 
 window.onbeforeunload = function () {
