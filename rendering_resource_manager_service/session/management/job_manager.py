@@ -125,22 +125,13 @@ class JobManager(object):
         log.debug(1, 'Creating job for ' + executable)
         description = saga.job.Description()
         description.name = settings.SLURM_JOB_NAME_PREFIX + executable
-
-        # Temporary hack to allow OSPRay execution on the cluster.
-        # Intel made a fix to OSPRay's version of Embree to fix the thread affinity issue:
-        # commit 9384a2ac9cec5c46a340476356f4e3f540b2a5c8
-        # Date:   Thu Apr 16 17:04:16 2015 -0500
-        # This fix is in both OSPRay v0.8.1 and v0.8.2, but not in the v0.7.2 that is
-        # currently used by BRayns
-        description.executable = '#SBATCH --exclusive\n'
-
-        description.executable += 'module purge\n'
+        description.executable = 'module purge\n'
         description.executable += 'module load ' + settings.SLURM_DEFAULT_MODULE + '\n'
         description.executable += executable
         description.total_physical_memory = 2000
         description.arguments = params
         description.queue = settings.SLURM_QUEUE
-        description.project = settings.SLURM_PROJECT
+        description.project = global_settings.SLURM_PROJECT
         description.output = settings.SLURM_OUTPUT_PREFIX + executable + settings.SLURM_OUT_FILE
         description.error = settings.SLURM_OUTPUT_PREFIX + executable + settings.SLURM_ERR_FILE
 

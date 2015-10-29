@@ -176,6 +176,7 @@ sys.path.append(BASE_DIR + '/rendering_resource_manager_service')
 # Slurm credentials (To be modified by deployment process)
 SLURM_USERNAME = 'TO_BE_MODIFIED'
 SLURM_KEY = 'TO_BE_MODIFIED'
+SLURM_PROJECT = 'TO_BE_MODIFIED'
 
 # ClientID needed by the HBP collab project browser
 SOCIAL_AUTH_HBP_KEY = 'TO_BE_MODIFIED'
