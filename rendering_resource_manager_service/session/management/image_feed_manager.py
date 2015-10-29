@@ -30,9 +30,10 @@ The job manager is in charge of managing slurm jobs.
 import urllib2
 import json
 import rendering_resource_manager_service.service.settings as settings
-import rendering_resource_manager_service.utils.tools as tools
 from rendering_resource_manager_service.session.models import Session
 import rendering_resource_manager_service.utils.custom_logging as log
+from rendering_resource_manager_service.session.management.session_manager_settings \
+    import COOKIE_ID
 
 
 class ImageFeedManager(object):
@@ -41,8 +42,7 @@ class ImageFeedManager(object):
     manages the routes for the different sessions held by the Rendering Resource
     Manager service.
     """
-    def __init__(self, request, session_id):
-        self._headers = tools.get_request_headers(request)
+    def __init__(self, session_id):
         self._session_id = session_id
 
     def __get_uri(self):
@@ -78,7 +78,7 @@ class ImageFeedManager(object):
             log.info(1, 'Route exists: ' + status[1])
             return status
         elif status[0] == 404:
-            '# Create new route'
+            # Create new route
             log.error('Route does not exist for session ' + str(self._session_id) +
                       ', creating it')
             status = self.add_route()
@@ -104,9 +104,10 @@ class ImageFeedManager(object):
         """
         try:
             url = settings.IMAGE_STREAMING_SERVICE_URL + '/route'
-            req = urllib2.Request(url=url, headers=self._headers, data=uri)
+            req = urllib2.Request(url=url, data=uri)
             req.get_method = lambda: method
             req.add_header('Content-Type', 'application/json')
+            req.add_header('Cookie', COOKIE_ID + '=' + str(self.session_id))
             response = urllib2.urlopen(req).read()
             log.info(1, '__do_request(' + method + ',' + uri + '=' + response)
             return [200, response]
