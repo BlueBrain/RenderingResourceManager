@@ -268,7 +268,7 @@ class CommandViewSet(viewsets.ModelViewSet):
                 status = cls.__job_information(session)
                 response = HttpResponse(status=status[0], content=status[1])
             elif command == 'imagefeed':
-                status = cls.__image_feed(session_id, request)
+                status = cls.__image_feed(session_id)
                 response = HttpResponse(status=status[0], content=status[1])
             else:
                 response = cls.__forward_request(session, command, request)
@@ -408,8 +408,8 @@ class CommandViewSet(viewsets.ModelViewSet):
             return status
 
     @classmethod
-    def __image_feed(cls, session_id, request):
-        ifm = image_feed_manager.ImageFeedManager(request, session_id)
+    def __image_feed(cls, session_id):
+        ifm = image_feed_manager.ImageFeedManager(session_id)
         return ifm.get_route()
 
     @classmethod
