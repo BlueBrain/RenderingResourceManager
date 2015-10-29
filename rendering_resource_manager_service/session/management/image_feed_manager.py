@@ -75,7 +75,7 @@ class ImageFeedManager(object):
         # Check if route already exists'
         status = self.__do_request('GET', '')
         if status[0] == 200:
-            log.info(1, 'Route exists: ' + status[1])
+            log.info(1, 'Route exists: ' + str(status[1]))
             return status
         elif status[0] == 404:
             # Create new route
@@ -86,12 +86,12 @@ class ImageFeedManager(object):
                 return self.__do_request('GET', '')
             else:
                 response = 'Image streaming service (' + settings.IMAGE_STREAMING_SERVICE_URL + \
-                           ') failed to create new route: ' + status[1]
+                           ') failed to create new route: ' + str(status[1])
                 log.error(response)
                 return [400, response]
         else:
             response = 'Image streaming service (' + settings.IMAGE_STREAMING_SERVICE_URL + \
-                       ') is unreachable: ' + status[1]
+                       ') is unreachable: ' + str(status[1])
             log.error(response)
             return [400, response]
 
@@ -107,7 +107,7 @@ class ImageFeedManager(object):
             req = urllib2.Request(url=url, data=uri)
             req.get_method = lambda: method
             req.add_header('Content-Type', 'application/json')
-            req.add_header('Cookie', COOKIE_ID + '=' + str(self.session_id))
+            req.add_header('Cookie', COOKIE_ID + '=' + str(self._session_id))
             response = urllib2.urlopen(req).read()
             log.info(1, '__do_request(' + method + ',' + uri + '=' + response)
             return [200, response]
