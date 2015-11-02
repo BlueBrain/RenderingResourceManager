@@ -1,0 +1,17 @@
+*.pyc
+.coverage
+.idea/
+ContinuousIntegration/
+.tmp
+bower_components
+dist
+node_modules
+*.log
+ci_dep.txt
+coverage.xml
+pep8.txt
+platform_venv
+pylint.txt
+*.egg-info
+db.sqlite3
+test-reports
