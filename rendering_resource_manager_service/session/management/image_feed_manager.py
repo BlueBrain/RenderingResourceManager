@@ -113,7 +113,7 @@ class ImageFeedManager(object):
             return [200, response]
         except urllib2.HTTPError as e:
             log.error(str(e))
-            return [e.code, e.reason]
+            return [e.code, str(e)]
         except urllib2.URLError as e:
             log.error(str(e))
-            return [401, e.reason]
+            return [401, str(e)]
