@@ -1,11 +1,4 @@
-#
-# --- TEMPLATE ---
-#
-# Must be encrypted as explained in Secrets management section of the wiki:
-# https://bbpteam.epfl.ch/project/spaces/display/INFRA/Service+configuration+management
-
-rrm::secret_key: 'mq0=t+ii)6)xag$6^p%v2z@#e@+b#+s*k57cqgg2l++w74b=y_'
-rrm::slurm_username: 'TO_BE_MODIFIED'
-rrm::slurm_password: 'TO_BE_MODIFIED'
-nginx::oidc::client_secret: 'BHKsKdVW9YUmegU85VVb_WnogvL-e-AB-m-E2zI0T0oo33Yzy-EJ3ev-jNk5pqVHuJ67x1D1vgfjkZ_eMdePUw'
-rrm::client_id: '5604af1c-1e07-481d-8b13-785ea44014c5'
+nginx::oidc::client_secret: 'TO_BE_MODIFIED'
+vws::secret_key: 'TO_BE_MODIFIED'
+vws::slurm_username: 'TO_BE_MODIFIED'
+vws::client_id: 'TO_BE_MODIFIED'
