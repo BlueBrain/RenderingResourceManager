@@ -102,12 +102,13 @@ class JobManager(object):
             parameters = rest_parameters.split()
             parameters.append(params)
             environment_variables = rr_settings.environment_variables.split()
+            modules = rr_settings.modules.split()
             environment_variables.append(environment)
             log.info(1, 'Scheduling job: ' +
                      str(rr_settings.command_line) + ' ' + str(parameters) + ', ' +
                      str(environment_variables))
-            session.job_id = self.create_job(
-                str(rr_settings.command_line), parameters, environment_variables)
+            session.job_id = self.create_job(str(rr_settings.command_line), parameters,
+                                             environment_variables, modules)
             session.status = SESSION_STATUS_SCHEDULED
             session.save()
             return [200, 'Job ' + str(session.job_id) + ' now scheduled']
@@ -117,7 +118,7 @@ class JobManager(object):
         finally:
             self._mutex.release()
 
-    def create_job(self, executable, params, environment):
+    def create_job(self, executable, params, environment, modules):
         """
         Launch a job on the cluster with the given executable and parameters
         :return: The ID of the job
@@ -126,7 +127,8 @@ class JobManager(object):
         description = saga.job.Description()
         description.name = settings.SLURM_JOB_NAME_PREFIX + executable
         description.executable = 'module purge\n'
-        description.executable += 'module load ' + settings.SLURM_DEFAULT_MODULE + '\n'
+        for module in modules:
+            description.executable += 'module load ' + module.strip() + '\n'
         description.executable += executable
         description.total_physical_memory = 2000
         description.arguments = params

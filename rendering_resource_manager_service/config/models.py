@@ -35,9 +35,10 @@ class RenderingResourceSettings(models.Model):
 
     id = models.CharField(max_length=50, primary_key=True)
     command_line = models.CharField(max_length=1024)
-    environment_variables = models.CharField(max_length=4096)
-    process_rest_parameters_format = models.CharField(max_length=1024)
-    scheduler_rest_parameters_format = models.CharField(max_length=1024)
+    environment_variables = models.CharField(max_length=4096, default='')
+    modules = models.CharField(max_length=4096, default='')
+    process_rest_parameters_format = models.CharField(max_length=1024, default='')
+    scheduler_rest_parameters_format = models.CharField(max_length=1024, default='')
     graceful_exit = models.BooleanField(default=True)
 
     class Meta(object):
@@ -47,6 +48,7 @@ class RenderingResourceSettings(models.Model):
         ordering = (
             'id', 'command_line',
             'environment_variables',
+            'modules',
             'process_rest_parameters_format',
             'scheduler_rest_parameters_format',
             'graceful_exit')

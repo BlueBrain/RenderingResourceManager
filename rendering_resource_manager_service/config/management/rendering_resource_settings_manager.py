@@ -52,6 +52,7 @@ class RenderingResourceSettingsManager(object):
                 id=settings_id,
                 command_line=str(params['command_line']),
                 environment_variables=str(params['environment_variables']),
+                modules=str(params['modules']),
                 process_rest_parameters_format=str(params['process_rest_parameters_format']),
                 scheduler_rest_parameters_format=str(params['scheduler_rest_parameters_format']),
                 graceful_exit=params['graceful_exit'])
@@ -75,6 +76,7 @@ class RenderingResourceSettingsManager(object):
             settings = RenderingResourceSettings.objects.get(id=settings_id)
             settings.command_line = str(params['command_line'])
             settings.environment_variables = str(params['environment_variables'])
+            settings.modules = str(params['modules'])
             settings.process_rest_parameters_format = \
                 str(params['process_rest_parameters_format'])
             settings.scheduler_rest_parameters_format = \
