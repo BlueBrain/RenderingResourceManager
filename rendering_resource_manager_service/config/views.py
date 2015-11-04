@@ -119,5 +119,5 @@ class RenderingResourceSettingsViewSet(viewsets.ModelViewSet):
         :rtype A Json response containing on ok status or a description of the error
         """
         manager = rendering_resource_settings_manager.RenderingResourceSettingsManager()
-        return HttpResponse(status=200,
-                            content=manager.list(cls.serializer_class))
+        response = manager.list(cls.serializer_class)
+        return HttpResponse(status=response[0], content=response[1])
