@@ -35,8 +35,9 @@ class RenderingResourceSettingsAdmin(admin.ModelAdmin):
     """
     This class exposes the RenderingResourceSettings table to the admin interface
     """
-    fields = ['command_line', 'environment_variables', 'process_rest_parameters_format',
-              'scheduler_rest_parameters_format', 'graceful_exit']
+    fields = ['id', 'command_line', 'environment_variables', 'modules',
+              'process_rest_parameters_format', 'scheduler_rest_parameters_format',
+              'graceful_exit']
 
 try:
     admin.site.unregister(RenderingResourceSettings)

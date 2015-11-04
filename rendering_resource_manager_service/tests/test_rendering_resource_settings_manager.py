@@ -54,6 +54,7 @@ class TestSessionManager(TestCase):
         params['command_line'] = 'rtneuron-app.py'
         params['environment_variables'] = \
             'EQ_WINDOW_IATTR_HINT_HEIGHT=512,EQ_WINDOW_IATTR_HINT_WIDTH=512'
+        params['modules'] = 'BBP/viz/latest'
         params['process_rest_parameters_format'] = '--rest {$rest_hostname}:${rest_port}'
         params['scheduler_rest_parameters_format'] = '--rest $SLURMD_NODENAME:${rest_port}'
         params['graceful_exit'] = True
@@ -71,6 +72,7 @@ class TestSessionManager(TestCase):
         params['command_line'] = 'rtneuron-app.py'
         params['environment_variables'] = \
             'EQ_WINDOW_IATTR_HINT_HEIGHT=512,EQ_WINDOW_IATTR_HINT_WIDTH=512'
+        params['modules'] = 'BBP/viz/latest'
         params['process_rest_parameters_format'] = '--rest {$rest_hostname}:${rest_port}'
         params['scheduler_rest_parameters_format'] = '--rest $SLURMD_NODENAME:${rest_port}'
         params['graceful_exit'] = True
@@ -100,6 +102,7 @@ class TestSessionManager(TestCase):
         params['command_line'] = 'rtneuron-app.py'
         params['environment_variables'] = \
             'EQ_WINDOW_IATTR_HINT_HEIGHT=512,EQ_WINDOW_IATTR_HINT_WIDTH=512'
+        params['modules'] = 'BBP/viz/latest'
         params['process_rest_parameters_format'] = '--rest {$rest_hostname}:${rest_port}'
         params['scheduler_rest_parameters_format'] = '--rest $SLURMD_NODENAME:${rest_port}'
         params['graceful_exit'] = True
@@ -110,6 +113,7 @@ class TestSessionManager(TestCase):
         params['command_line'] = 'livre'
         params['environment_variables'] = \
             'EQ_WINDOW_IATTR_HINT_HEIGHT=512,EQ_WINDOW_IATTR_HINT_WIDTH=512'
+        params['modules'] = 'BBP/viz/2015.R3'
         params['process_rest_parameters_format'] = \
             '--rest {$rest_hostname}:${rest_port}:${rest_schema}'
         params['scheduler_rest_parameters_format'] = \
@@ -120,16 +124,29 @@ class TestSessionManager(TestCase):
         status = manager.list(RenderingResourceSettingsSerializer)
         nt.assert_true(status[0] == 200)
         value = status[1]
-        reference = '[{"id": "livre", "command_line": "livre", ' + \
-                    '"environment_variables": "EQ_WINDOW_IATTR_HINT_HEIGHT=512,EQ_WINDOW_IATTR_HINT_WIDTH=512", ' +\
-                    '"process_rest_parameters_format": "--rest {$rest_hostname}' + \
-                    ':${rest_port}:${rest_schema}", "scheduler_rest_parameters_format": ' + \
-                    '"--rest $SLURMD_NODENAME:${rest_port}:${rest_schema}", "graceful_exit": true}, ' + \
-                    '{"id": "rtneuron", "command_line": "rtneuron-app.py", ' + \
-                    '"environment_variables": "EQ_WINDOW_IATTR_HINT_HEIGHT=512,EQ_WINDOW_IATTR_HINT_WIDTH=512", ' +\
-                    '"process_rest_parameters_format": "--rest {$rest_hostname}:${rest_port}", ' + \
-                    '"scheduler_rest_parameters_format": ' + \
-                    '"--rest $SLURMD_NODENAME:${rest_port}", "graceful_exit": true}]'
+        reference = '[' \
+                    '{"id": "livre", ' \
+                    '"command_line": "livre", ' \
+                    '"environment_variables": ' \
+                    '"EQ_WINDOW_IATTR_HINT_HEIGHT=512,EQ_WINDOW_IATTR_HINT_WIDTH=512", ' \
+                    '"modules": ' \
+                    '"BBP/viz/2015.R3", ' \
+                    '"process_rest_parameters_format": ' \
+                    '"--rest {$rest_hostname}:${rest_port}:${rest_schema}", ' \
+                    '"scheduler_rest_parameters_format": ' \
+                    '"--rest $SLURMD_NODENAME:${rest_port}:${rest_schema}", ' \
+                    '"graceful_exit": true}, ' \
+                    '{"id": "rtneuron", ' \
+                    '"command_line": "rtneuron-app.py", ' \
+                    '"environment_variables": ' \
+                    '"EQ_WINDOW_IATTR_HINT_HEIGHT=512,EQ_WINDOW_IATTR_HINT_WIDTH=512", ' \
+                    '"modules": "BBP/viz/latest", ' \
+                    '"process_rest_parameters_format": ' \
+                    '"--rest {$rest_hostname}:${rest_port}", ' \
+                    '"scheduler_rest_parameters_format": ' \
+                    '"--rest $SLURMD_NODENAME:${rest_port}", ' \
+                    '"graceful_exit": true}' \
+                    ']'
         nt.assert_true(value == reference)
 
     def test_get_by_name_settings(self):
@@ -140,6 +157,7 @@ class TestSessionManager(TestCase):
         params['command_line'] = 'rtneuron-app.py'
         params['environment_variables'] = \
             'EQ_WINDOW_IATTR_HINT_HEIGHT=512,EQ_WINDOW_IATTR_HINT_WIDTH=512'
+        params['modules'] = 'BBP/viz/latest'
         params['process_rest_parameters_format'] = '--rest {$rest_hostname}:${rest_port}'
         params['scheduler_rest_parameters_format'] = '--rest $SLURMD_NODENAME:${rest_port}'
         params['graceful_exit'] = True

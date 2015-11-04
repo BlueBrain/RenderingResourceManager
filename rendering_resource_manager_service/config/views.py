@@ -52,6 +52,7 @@ class RenderingResourceSettingsSerializer(serializers.ModelSerializer):
         model = RenderingResourceSettings
         fields = ('id', 'command_line',
                   'environment_variables',
+                  'modules',
                   'process_rest_parameters_format',
                   'scheduler_rest_parameters_format',
                   'graceful_exit')

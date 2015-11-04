@@ -7,6 +7,10 @@ A service managing rendering resources in order to allow visualization web servi
 - Implementing some kind of stickiness based on the model loaded on a particular Renderer. This means that if two request for rendering based on the same model are received, they should both be sent to the same Renderer (the rationale behind this, is that it is very expensive to move the model around, because models contain big amounts of data).
 - Rejecting connections when no resource is available
 
+## ChangeLog
+
+To keep track of the changes between releases check the
+[changelog](doc/Changelog.md).
 
 ##Installation
 Install python 2.6 or 2.7 , and virtualenv with apt-get and pip
