@@ -2,7 +2,7 @@
 # of the rendering resource manager.
 
 # Livre
-curl -curl --dump-header - -H "Accept:application/json" -H "Content-Type:application/json" -X POST --data '{"id": "livre", "command_line": "livre", "modules": "", """environment_variables": "", "process_rest_parameters_format": "--rest ${rest_hostname}:${rest_port} --zeq-schema ${rest_schema}", "scheduler_rest_parameters_format": "--rest $SLURMD_NODENAME:${rest_port} --zeq-schema ${rest_schema}://", "graceful_exit": "True" }' http://localhost:8383/rendering-resource-manager/v1/config/
+curl -curl --dump-header - -H "Accept:application/json" -H "Content-Type:application/json" -X POST --data '{"id": "livre", "command_line": "livre", "modules": "", "environment_variables": "", "process_rest_parameters_format": "--rest ${rest_hostname}:${rest_port} --zeq-schema ${rest_schema}", "scheduler_rest_parameters_format": "--rest $SLURMD_NODENAME:${rest_port} --zeq-schema ${rest_schema}://", "graceful_exit": "True" }' http://localhost:8383/rendering-resource-manager/v1/config/
 
 # RTNeuron
 curl -curl --dump-header - -H "Accept:application/json" -H "Content-Type:application/json" -X POST --data '{"id": "rtneuron", "command_line": "rtneuron-app.py", "modules": "", "environment_variables": "", "process_rest_parameters_format": "--rest ${rest_hostname}:${rest_port} --zeq-schema ${rest_schema}", "scheduler_rest_parameters_format": "--rest $SLURMD_NODENAME:${rest_port} --zeq-schema ${rest_schema}", "graceful_exit": "True" }' http://localhost:8383/rendering-resource-manager/v1/config/
