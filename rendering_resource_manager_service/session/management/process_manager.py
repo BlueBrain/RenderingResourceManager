@@ -72,12 +72,17 @@ class ProcessManager(object):
             except TypeError:
                 log.debug(1, 'No parameters specified')
 
-            environment_variables = settings.environment_variables.split()
-            environment_variables.append(environment)
+            environment_variables = settings.environment_variables.split() + environment.split(',')
+            process_env = os.environ.copy()
+            for environment_variable in environment_variables:
+                if environment_variable != '':
+                    variable = environment_variable.split('=')
+                    process_env[variable[0]] = variable[1]
 
             log.info(1, 'Launching ' + settings.id + ' with ' + str(command_line))
             process = subprocess.Popen(
                 command_line,
+                env=process_env,
                 shell=False,
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE)
             session_info.process_pid = process.pid

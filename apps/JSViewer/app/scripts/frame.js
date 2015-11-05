@@ -21,7 +21,7 @@
 /* global console, THREE, Detector */
 'use strict';
 
-var serviceUrl = 'http://localhost:8383/rendering-resource-manager/v1';
+var serviceUrl = 'http://bbpcd015.epfl.ch/viz/rendering-resource-manager/v1';
 
 // constants
 var SESSION_STATUS_STOPPED = 0;
@@ -102,9 +102,9 @@ var statusQuery = setInterval(function () {
                             // Application is now available.
                             // Request for image streaming
                             doRequest('GET', serviceUrl + '/session/imagefeed', function (event) {
-                                console.log('Image streaming from ' + event.target.responseText)
                                 var obj = JSON.parse(event.target.responseText);
-                                renderedImage.src = obj.uri
+                                console.log('Image streaming from ' + obj.uri)
+                                renderedImage.src = 'http://' + obj.uri
                                 firstImageRetrieved = true;
                             });
                         }
@@ -146,6 +146,7 @@ function createSession(callback) {
 }
 
 function deleteSession(callback) {
+    renderedImage.src = ''
     sessionHandler('delete', callback);
 }
 
@@ -198,9 +199,13 @@ function startRenderer(event) {
         // Image size
         var snapshotResolution = parent.document.getElementById('snapshotresolution').value;
         var frame = parent.document.getElementById('mainFrame');
-        var width = 960;
-        var height = 540;
-        if (snapshotResolution === '2k') {
+        var width = 800;
+        var height = 400;
+        if (snapshotResolution === '1k') {
+            width = 1920;
+            height = 1080;
+        }
+        else if (snapshotResolution === '2k') {
             width = 1920;
             height = 1080;
         } else if (snapshotResolution === '4k') {
@@ -234,7 +239,7 @@ function startRenderer(event) {
             environment: environment,
         };
 
-        doRequest('PUT', serviceUrl + '/session/open', function (eventSchedule) {
+        doRequest('PUT', serviceUrl + '/session/schedule', function (eventSchedule) {
             if (eventSchedule.target.status === 200) {
                 setTimeout(init, secondsBeforeStartSession * 1000);
             } else {
@@ -343,8 +348,9 @@ function render() {
                 cameraMatrix.matrix[14] = -camera.position.z * scaling;
             }
         }
+        doRequest('PUT', serviceUrl + '/session/CAMERA', function () {}, cameraMatrix);
     }
-    doRequest('PUT', serviceUrl + '/session/CAMERA', function () {}, cameraMatrix);
+    positionChangeCounter++;
 }
 
 window.onbeforeunload = function () {
