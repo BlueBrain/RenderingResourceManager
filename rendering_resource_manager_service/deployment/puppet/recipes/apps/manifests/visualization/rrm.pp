@@ -36,168 +36,225 @@ class apps::visualization::rrm (
   $nginx_lua_conf     = "${::nginx::confd}/rrm.conf"
   $nginx_lua_conf_ext = "${module_name}/rrm/rrm.conf.erb"
   $nginx_port         = '8000'
-  $service_name       = 'rendering-resource-manager/v1'
   $swagger_ui         = true
-  $upstream_name      = 'rendering-resource-manager'
-  $service_port       = '8383'
 
-  $pymodule    = 'rendering_resource_manager_service'
+  # Python setup
   $bbp_pypi    = hiera("bbp_pypi::${::environment}")
-  $app_dir     = "/opt/${pymodule}"
-  $db_dir      = "/var/${upstream_name}"
-  $virtualenv  = "${app_dir}/virtualenv"
-  $module_bin  = "${virtualenv}/bin"
+  $python_venv = '/opt/virtualenv'
 
-  #django setup
-  $secret_key  = hiera('rrm::secret_key')
-  $slurm_username = hiera('rrm::slurm_username')
-  $slurm_password = hiera('rrm::slurm_password')
-  $client_id = hiera('rrm::client_id')
-  $static_root = "${app_dir}/static/"
-  $static_path = 'rrm/static/'
-  $back_version = hiera('rrm::back_version')
+  # Rendering Resource Manager Service Setup
+  $rrm_upstream_name  = hiera('vws::rrm_name')
+  $rrm_api_version    = hiera('vws::rrm_api_version')
+  $rrm_service_name   = "${rrm_upstream_name}/${rrm_api_version}"
+  $rrm_service_port   = hiera('vws::rrm_port')
+  $secret_key         = hiera('vws::secret_key')
+  $slurm_username     = hiera('vws::slurm_username')
+  $slurm_project      = hiera('vws::slurm_project')
+  $client_id          = hiera('vws::client_id')
+  $rrm_version        = hiera('vws::rrm_version')
+  $rrm_module         = 'rendering_resource_manager_service'
+  $db_dir             = "/var/${rrm_upstream_name}"
+  $rrm_module_bin     = "${python_venv}/bin"
 
-  ########## front end setup
+  # Image Streaming Service Setup
+  $hiss_upstream_name = hiera('vws::hiss_name')
+  $hiss_api_version   = hiera('vws::hiss_api_version')
+  $hiss_service_name  = "${hiss_upstream_name}/${hiss_api_version}"
+  $hiss_service_port  = hiera('vws::hiss_port')
+  $hiss_version       = hiera('vws::hiss_version')
+  $hiss_module        = 'http_image_streaming_service'
+  $hiss_module_bin    = "${python_venv}/bin"
+
+  # Front-end Setup
   $pkgname               = 'viz-render-viewer'
+  $front_prefix          = hiera('vws::front_prefix')
+  $front_version         = hiera('vws::front_version')
   $path                  = '/opt/visualization'
-  $www_root              = "${path}/node_modules/${pkgname}/dist"
+  $prefixed_path         = "${path}/${front_prefix}"
   $front_port            = '80'
+  $www_root              = "${prefixed_path}/node_modules/${pkgname}/dist"
   $registry              = hiera('apps::nodejs::npmregistry')
-  $server_names          = hiera('rrm::server::server_names')
-  $static_asset_expires  = hiera('rrm::server::static_asset_expires')
-  $dynamic_asset_expires = hiera('rrm::server::dynamic_asset_expires')
-  $port                  = hiera('rrm::server::port')
-  $listen_options        = hiera('rrm::server::listen_options')
-  $config                = hiera('rrm::config::visualization')
-  #for NPM package
-  $front_version = hiera('rrm::front_version')
+  $server_names          = hiera('vws::server::server_names')
+  $static_asset_expires  = hiera('vws::server::static_asset_expires')
+  $dynamic_asset_expires = hiera('vws::server::dynamic_asset_expires')
+  $port                  = hiera('vws::server::port')
+  $listen_options        = hiera('vws::server::listen_options')
+  $config                = "{\"version\": \"${front_version}\", \"api\": { \"${rrm_api_version}\": \"http://${::fqdn}/${front_prefix}/${rrm_service_name}\"}}"
 
+  # ----------------------------------------------------------------------------
+  # Global environment settings
+  # ----------------------------------------------------------------------------
 
-  python::virtualenv { $virtualenv :
-    ensure  => present,
-    owner   => $user,
-    require => [File[$app_dir],
-                ],
+  # Disable selinux
+  exec { 'disable selinux on host':
+    user    => 'root',
+    command => '/usr/sbin/setenforce 0',
   }
 
-  python::pip { $pymodule :
-    virtualenv   => $virtualenv,
-    url          => $bbp_pypi,
-    install_args => '--pre --upgrade',
-    version      => $back_version,
-    egg          => $pymodule,
-    require      => [Python::Virtualenv[$virtualenv],
-                    ],
-  }
-
-  python::pip { 'gunicorn':
-    virtualenv => $virtualenv,
-    url        => $bbp_pypi,
-    version    => '19.1.1',
-    egg        => 'gunicorn',
-    require    => [Python::Virtualenv[$virtualenv],
-                  ],
-  }
-
-  file { $app_dir:
+  # Create python virtual environment folder
+  file { $python_venv:
     ensure => directory,
     owner  => $user,
     group  => $group,
     mode   => '0755',
   }
 
-  file { $db_dir:
-    ensure  => directory,
+  # Create python virtual environment
+  python::virtualenv { $python_venv :
+    ensure  => present,
     owner   => $user,
-    group   => $group,
-    mode    => '0755',
-    require => [File[$app_dir],
+    require => [File[$python_venv],
                 ],
   }
 
-  file { $static_root:
-    ensure  => directory,
-    owner   => $user,
-    group   => $group,
-    mode    => '0755',
-    require => [File[$app_dir],
-                ]
+  # Deploy gunicorn
+  python::pip { 'gunicorn':
+    virtualenv => $python_venv,
+    url        => $bbp_pypi,
+    version    => '19.1.1',
+    egg        => 'gunicorn',
+    require    => [Python::Virtualenv[$python_venv],
+                  ],
   }
 
-  file { 'local_settings':
+  # ----------------------------------------------------------------------------
+  # Rendering Resource Manager service
+  # ----------------------------------------------------------------------------
+
+  # Install RRM module
+  python::pip { $rrm_module :
+    virtualenv   => $python_venv,
+    url          => $bbp_pypi,
+    install_args => '--pre --upgrade',
+    version      => $rrm_version,
+    egg          => $rrm_module,
+    require      => [Python::Virtualenv[$python_venv],
+                    ],
+  }
+
+  # Create RRM machine specific settings
+  file { 'rrm_local_settings':
     ensure  => present,
-    path    => "${virtualenv}/lib/python2.6/site-packages/${pymodule}/local_settings.py",
+    path    => "${python_venv}/lib/python2.6/site-packages/${rrm_module}/local_settings.py",
     owner   => $user,
     group   => $group,
     mode    => '0644',
     replace => true,
     content => template("${module_name}/rrm/local_settings.py.erb"),
-    require => [Python::Pip[$pymodule],
+    require => [Python::Pip[$rrm_module],
                 ],
   }
 
-  exec { "syncdb_${pymodule}":
-    command => "python ${virtualenv}/lib/python2.6/site-packages/${pymodule}/manage.py syncdb --noinput",
-    path    => $module_bin,
-    cwd     => $virtualenv,
+  # Create and populate RRM database
+  file { $db_dir:
+    ensure => directory,
+    owner  => $user,
+    group  => $group,
+    mode   => '0755',
+  }
+  exec { "syncdb_${rrm_module}":
+    command => "${python_venv}/bin/python ${python_venv}/lib/python2.6/site-packages/${rrm_module}/manage.py syncdb --noinput",
+    path    => $rrm_module_bin,
+    cwd     => $python_venv,
     user    => $user,
     timeout => 0,
-    require => [File['local_settings'],
+    require => [File['rrm_local_settings'],
                 File[$db_dir]
                 ]
   }
 
   exec { 'setup_db_config_livre':
-    command => "curl -curl --dump-header - -H \"Accept:application/json\" -H \"Content-Type:application/json\" -X POST --data \'{\"id\": \"livre\", \"command_line\": \"livre\", \"environment_variables\": \"\", \"process_rest_parameters_format\": \"--use-rest --rest-host \${rest_hostname} --rest-port \${rest_port} --zeq-schema \${rest_schema}\", \"scheduler_rest_parameters_format\": \"--use-rest --rest-host \$SLURMD_NODENAME --rest-port \${rest_port} --zeq-schema \${rest_schema}\", \"graceful_exit\": \"True\" }\' http://localhost:${service_port}/${service_name}/config/",
+    command => "curl -curl --dump-header - -H \"Accept:application/json\" -H \"Content-Type:application/json\" -X POST --data \'{\"id\": \"livre\", \"command_line\": \"livre\", \"modules\": \"BBP/viz/latest\", \"environment_variables\": \"\", \"process_rest_parameters_format\": \"--rest \${rest_hostname}:\${rest_port} --zeq-schema \${rest_schema}://\", \"scheduler_rest_parameters_format\": \"--rest \$SLURMD_NODENAME:\${rest_port} --zeq-schema \${rest_schema}://\", \"graceful_exit\": \"True\" }\' http://localhost:${rrm_service_port}/${rrm_service_name}/config/",
     path    => '/usr/bin/',
     require => Supervisor::Service['rrm']
   }
 
   exec { 'setup_db_config_rtneuron':
-    command => "curl -curl --dump-header - -H \"Accept:application/json\" -H \"Content-Type:application/json\" -X POST --data \'{\"id\": \"rtneuron\", \"command_line\": \"rtneuron-app.py\", \"environment_variables\": \"\", \"process_rest_parameters_format\": \"--rest \${rest_hostname}:\${rest_port}\", \"scheduler_rest_parameters_format\": \"--rest \$SLURMD_NODENAME:\${rest_port}\", \"graceful_exit\": \"True\" }\' http://localhost:${service_port}/${service_name}/config/",
+    command => "curl -curl --dump-header - -H \"Accept:application/json\" -H \"Content-Type:application/json\" -X POST --data \'{\"id\": \"rtneuron\", \"command_line\": \"rtneuron-app.py\", \"modules\": \"BBP/viz/latest\", \"environment_variables\": \"\", \"process_rest_parameters_format\": \"--rest \${rest_hostname}:\${rest_port} --zeq-schema \${rest_schema}\", \"scheduler_rest_parameters_format\": \"--rest \$SLURMD_NODENAME:\${rest_port} --zeq-schema \${rest_schema}\", \"graceful_exit\": \"True\" }\' http://localhost:${rrm_service_port}/${rrm_service_name}/config/",
     path    => '/usr/bin/',
     require => Supervisor::Service['rrm']
   }
 
   exec { 'setup_db_config_BRayns':
-    command => "curl -curl --dump-header - -H \"Accept:application/json\" -H \"Content-Type:application/json\" -X POST --data \'{\"id\": \"braynsService\", \"command_line\": \"braynsService\", \"environment_variables\": \"\", \"process_rest_parameters_format\": \"--rest-hostname \${rest_hostname} --rest-port \${rest_port} --rest-schema \${rest_schema}\", \"scheduler_rest_parameters_format\": \"--rest-hostname \$SLURMD_NODENAME --rest-port \${rest_port} --rest-schema \${rest_schema}\", \"graceful_exit\": \"True\" }\' http://localhost:${service_port}/${service_name}/config/",
+    command => "curl -curl --dump-header - -H \"Accept:application/json\" -H \"Content-Type:application/json\" -X POST --data \'{\"id\": \"brayns\", \"command_line\": \"braynsService\", \"modules\": \"BBP/viz/latest\", \"environment_variables\": \"\", \"process_rest_parameters_format\": \"--rest \${rest_hostname}:\${rest_port} --zeq-schema \${rest_schema}\", \"scheduler_rest_parameters_format\": \"--rest \$SLURMD_NODENAME:\${rest_port} --zeq-schema \${rest_schema}\", \"graceful_exit\": \"True\" }\' http://localhost:${rrm_service_port}/${rrm_service_name}/config/",
     path    => '/usr/bin/',
     require => Supervisor::Service['rrm']
   }
 
-  exec { "collectstatic_${pymodule}":
-    command => "python ${virtualenv}/lib/python2.6/site-packages/${pymodule}/manage.py collectstatic --noinput",
-    path    => $module_bin,
-    user    => $user,
-    timeout => 0,
-    require => [File[$static_root],
-                File['local_settings'],
-                ],
-    }
-
+  # Configure RRM in gunicorn
   supervisor::service { 'rrm':
     ensure      => present,
     name        => 'rrm',
     enable      => true,
-    command     => "${module_bin}/gunicorn \
-                    ${pymodule}.service.wsgi \
-                    -b 127.0.0.1:${service_port} --log-level debug --log-file - ",
+    command     => "${rrm_module_bin}/gunicorn \
+                    ${rrm_module}.service.wsgi \
+                    -w 4 -b 127.0.0.1:${rrm_service_port} --log-file - ",
     user        => $user,
     group       => $group,
-    directory   => $virtualenv,
+    directory   => $python_venv,
     environment => "HOME=${home},USER=${user},\
-LOGNAME=${user},PWD=${virtualenv}",
-    require     => [Python::Pip[$pymodule],
+LOGNAME=${user},PWD=${python_venv}",
+    require     => [Python::Pip[$rrm_module],
                     Python::Pip['gunicorn'],
                     Class['::repo::bbp'],
-                    Exec["collectstatic_${pymodule}"],
                   ],
-    subscribe   => [Python::Pip[$pymodule],
-                    File[$static_root],
-                    File['local_settings'],
+    subscribe   => [Python::Pip[$rrm_module],
+                    File['hiss_local_settings'],
                     ],
   }
 
+  # ----------------------------------------------------------------------------
+  # Image Streaming service
+  # ----------------------------------------------------------------------------
+
+  # Install HISS module
+  python::pip { $hiss_module :
+    virtualenv   => $python_venv,
+    url          => $bbp_pypi,
+    install_args => '--pre --upgrade',
+    version      => $hiss_version,
+    egg          => $hiss_module,
+    require      => [Python::Virtualenv[$python_venv],
+                    ],
+  }
+
+  # Create HISS machine specific settings
+  file { 'hiss_local_settings':
+    ensure  => present,
+    path    => "${python_venv}/lib/python2.6/site-packages/${hiss_module}/service/settings.py",
+    owner   => $user,
+    group   => $group,
+    mode    => '0644',
+    replace => true,
+    content => template("${module_name}/hiss/local_settings.py.erb"),
+    require => [Python::Pip[$hiss_module],
+                ],
+  }
+
+  supervisor::service { 'hiss':
+    ensure      => present,
+    name        => 'hiss',
+    enable      => true,
+    command     => "${hiss_module_bin}/gunicorn \
+                    ${hiss_module}.service.wsgi \
+                    -w 4 -b 127.0.0.1:${hiss_service_port} --log-file - ",
+    user        => $user,
+    group       => $group,
+    directory   => $python_venv,
+    environment => "HOME=${home},USER=${user},\
+LOGNAME=${user},PWD=${python_venv}",
+    require     => [Python::Pip[$hiss_module],
+                    Python::Pip['gunicorn'],
+                    Class['::repo::bbp'],
+                  ],
+    subscribe   => [Python::Pip[$hiss_module],
+                    File['hiss_local_settings'],
+                    ],
+  }
+
+  # ----------------------------------------------------------------------------
+  # NGINX configuration
+  # ----------------------------------------------------------------------------
   file { $nginx_lua_conf:
     ensure  => present,
     path    => $nginx_lua_conf,
@@ -207,19 +264,7 @@ LOGNAME=${user},PWD=${virtualenv}",
     notify  => Service['nginx-lua'],
   }
 
-  # Disable selinux
-  exec { 'disable selinux on host':
-    user    => 'root',
-    command => '/usr/sbin/setenforce 0',
-  }
-
-  # install sshpass
-  exec { 'sshpass installation':
-    command => '/usr/bin/yum install -y sshpass',
-    timeout => 1800,
-  }
-
-  # back-end port
+  # rrm port
   @firewall { "${nginx_port}-v4 allow http":
     state  => 'NEW',
     proto  => 'tcp',
@@ -254,12 +299,15 @@ LOGNAME=${user},PWD=${virtualenv}",
   file { $path:
     ensure => directory
   }
+  file { $prefixed_path:
+    ensure => directory
+  }
 
   # Install node package ( will install manually )
-  nodejs::npm { "${path}:${pkgname}":
+  nodejs::npm { "${prefixed_path}:${pkgname}":
     ensure      => present,
     version     => $front_version,
-    require     => File[$path],
+    require     => File[$prefixed_path],
     install_opt => "--registry ${registry}"
   }
 
@@ -280,19 +328,30 @@ LOGNAME=${user},PWD=${virtualenv}",
 
   # This will redirect URLs starting with rendering-resource-manager to the
   # rrm service
-  nginx::resource::location { "jsvizviewer-${upstream_name}":
-    location            => "/${upstream_name}",
+  nginx::resource::location { $rrm_upstream_name:
+    location            => "/${front_prefix}/${rrm_upstream_name}",
     location_alias      => $www_root,
     vhost               => 'jsvizviewer',
     location_cfg_append => {
-      proxy_pass => "http://127.0.0.1:${service_port}",
+      proxy_pass => "http://127.0.0.1:${rrm_service_port}/${rrm_upstream_name}",
+    }
+  }
+
+  # This will redirect URLs starting with image_streaming to the
+  # rrm service
+  nginx::resource::location { $hiss_upstream_name:
+    location            => "/${front_prefix}/${hiss_upstream_name}",
+    location_alias      => $www_root,
+    vhost               => 'jsvizviewer',
+    location_cfg_append => {
+      proxy_pass => "http://127.0.0.1:${hiss_service_port}/${hiss_upstream_name}",
     }
   }
 
   # Create configuration file using data in hiera.
   file { "${www_root}/config.json":
     ensure  => file,
-    content => fact_to_json($config),
-    require => Nodejs::Npm["${path}:${pkgname}"]
+    content => $config,
+    require => Nodejs::Npm["${prefixed_path}:${pkgname}"]
   }
 }

@@ -7,21 +7,22 @@ ALLOWED_HOSTS = (
    '127.0.0.1',
    '<%= @fqdn %>',
    'visualization-dev.humanbrainproject.eu',
-   'synthesis-dev.humanbrainproject.eu:<%= @service_port %>',
+   'synthesis-dev.humanbrainproject.eu:<%= @rrm_service_port %>',
 )
 
 CORS_ORIGIN_WHITELIST = (
-   '127.0.0.1:<%= @service_port %>',
-   'localhost:<%= @service_port %>',
-   '<%= @fqdn %>:<%= @service_port %>',
-   'visualization-dev.humanbrainproject.eu:<%= @service_port %>',
-   'synthesis-dev.humanbrainproject.eu:<%= @service_port %>',
+   '127.0.0.1:<%= @rrm_service_port %>',
+   'localhost:<%= @rrm_service_port %>',
+   '<%= @fqdn %>:<%= @rrm_service_port %>',
+   'visualization-dev.humanbrainproject.eu:<%= @rrm_service_port %>',
+   'synthesis-dev.humanbrainproject.eu:<%= @rrm_service_port %>',
 )
 
 STATIC_URL = '/rrm/static/'
 STATIC_ROOT = '<%= @static_root %>'
 
 APPLICATION_NAME = 'rendering-resource-manager'
+APPLICATION_VERSION = '<%= @rrm_version %>'
 API_VERSION = 'v1'
 
 DATABASES = {
@@ -33,4 +34,6 @@ DATABASES = {
 
 SLURM_USERNAME = '<%= @user %>'
 SLURM_KEY = '<%= @home %>/.ssh/id_rsa'
+SLURM_PROJECT = '<%= @slurm_project %>'
 SOCIAL_AUTH_HBP_KEY = '<%= @client_id %>'
+IMAGE_STREAMING_SERVICE_URL = 'http://<%= @fqdn %>/<%= @front_prefix %>/<%= @hiss_service_name %>'

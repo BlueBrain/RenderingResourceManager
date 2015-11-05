@@ -1,0 +1,31 @@
+# Service account
+env::krb5::kstart: true
+env::krb5::kstart_users:
+ - 'bbpvizsoa'
+
+# Rendering Resource Manager
+vws::rrm_name: 'rendering-resource-manager'
+vws::rrm_port: '8383'
+vws::rrm_version: '0.1.0'
+vws::rrm_api_version: 'v1'
+
+# Image Streaming Service
+vws::hiss_name: 'image-streaming-service'
+vws::hiss_port: '8384'
+vws::hiss_version: '0.1.0'
+vws::hiss_api_version: 'v1'
+
+# Front-end
+vws::front_version: '0.3.2'
+vws::front_prefix: 'viz'
+
+# Slurm settings
+vws::slurm_project: 'proj3'
+
+# nginx settings
+vws::server::listen_options: 'default_server'
+vws::server::server_names:
+    - 'localhost'
+vws::server::port: 80
+vws::server::static_asset_expires: '1h'
+vws::server::dynamic_asset_expires: 'epoch'
