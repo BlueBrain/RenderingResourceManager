@@ -35,7 +35,7 @@ import rendering_resource_manager_service.service.settings as settings
 import rendering_resource_manager_service.admin.urls
 import rendering_resource_manager_service.config.urls
 import rendering_resource_manager_service.session.urls
-
+from django.contrib.staticfiles.urls import staticfiles_urlpatterns
 
 admin.autodiscover()
 
@@ -49,3 +49,5 @@ urlpatterns = patterns(
     url(settings.BASE_URL_PREFIX, include(rendering_resource_manager_service.config.urls)),
     url(settings.BASE_URL_PREFIX, include(rendering_resource_manager_service.session.urls)),
 )
+
+urlpatterns += staticfiles_urlpatterns()
