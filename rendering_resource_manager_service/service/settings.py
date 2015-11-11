@@ -45,7 +45,7 @@ APPLICATION_NAME = 'rendering-resource-manager'
 API_VERSION = 'v1'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 TEMPLATE_DEBUG = False
 
@@ -141,8 +141,6 @@ USE_TZ = False
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/1.7/howto/static-files/
 
-STATIC_URL = '/static/'
-
 SWAGGER_SETTINGS = {
     'exclude_namespaces': [],
     'api_version': '0.1',
@@ -182,9 +180,15 @@ SLURM_PROJECT = 'TO_BE_MODIFIED'
 SOCIAL_AUTH_HBP_KEY = 'TO_BE_MODIFIED'
 
 # Image Streaming Service URL
-IMAGE_STREAMING_SERVICE_URL = 'TO_BE_MODIFIED'
+IMAGE_STREAMING_SERVICE_URL = 'http://localhost:8385/image-streaming-service/v1'
 
 try:
     from local_settings import * # pylint: disable=F0401,W0403,W0401,W0614
 except ImportError as e:
     pass
+
+# Static files
+STATIC_URL = '/static/'
+STATICFILES_DIRS = [
+    BASE_DIR + '/../apps/AngularVwsViewer',
+]
