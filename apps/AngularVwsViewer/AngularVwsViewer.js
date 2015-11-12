@@ -162,8 +162,7 @@ app.controller('vwsController', function($scope, $attrs){
 
     /**
      * Starts a timer that queries the remote rendering resource status and update the local
-     * 'currentStatus' member variable accordingly. The result of the query populates {{status}}
-     * accordingly
+     * 'currentStatus' member variable. The result of the query populates {{status}}
      */
     var statusQuery = setInterval(function () {
         doRequest(REST_VERB_GET, MODULE_SESSION, SESSION_COMMAND_STATUS);
