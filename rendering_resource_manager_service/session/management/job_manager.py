@@ -107,8 +107,8 @@ class JobManager(object):
             log.info(1, 'Scheduling job: ' +
                      str(rr_settings.command_line) + ' ' + str(parameters) + ', ' +
                      str(environment_variables))
-            session.job_id = self.create_job(str(rr_settings.command_line), parameters,
-                                             environment_variables, modules)
+            session.job_id = self.create_job(str(rr_settings.id), str(rr_settings.command_line),
+                                             parameters, environment_variables, modules)
             session.status = SESSION_STATUS_SCHEDULED
             session.save()
             return [200, 'Job ' + str(session.job_id) + ' now scheduled']
@@ -118,14 +118,14 @@ class JobManager(object):
         finally:
             self._mutex.release()
 
-    def create_job(self, executable, params, environment, modules):
+    def create_job(self, id, executable, params, environment, modules):
         """
         Launch a job on the cluster with the given executable and parameters
         :return: The ID of the job
         """
         log.debug(1, 'Creating job for ' + executable)
         description = saga.job.Description()
-        description.name = settings.SLURM_JOB_NAME_PREFIX + executable
+        description.name = settings.SLURM_JOB_NAME_PREFIX + id
         description.executable = 'module purge\n'
         for module in modules:
             description.executable += 'module load ' + module.strip() + '\n'
@@ -134,8 +134,8 @@ class JobManager(object):
         description.arguments = params
         description.queue = settings.SLURM_QUEUE
         description.project = global_settings.SLURM_PROJECT
-        description.output = settings.SLURM_OUTPUT_PREFIX + executable + settings.SLURM_OUT_FILE
-        description.error = settings.SLURM_OUTPUT_PREFIX + executable + settings.SLURM_ERR_FILE
+        description.output = settings.SLURM_OUTPUT_PREFIX + id + settings.SLURM_OUT_FILE
+        description.error = settings.SLURM_OUTPUT_PREFIX + id + settings.SLURM_ERR_FILE
 
         # Add environment variables
         environment_variables = ''
@@ -341,7 +341,7 @@ class JobManager(object):
             rr_settings = \
                 manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
             filename = settings.SLURM_OUTPUT_PREFIX + \
-                       str(rr_settings.command_line) + filename
+                       str(rr_settings.id) + filename
             filename = filename.replace('%A', str(job_id_as_int), 1)
             result = filename + ':\n'
             result += JobManager.check_output(['ssh', '-i', global_settings.SLURM_KEY,
