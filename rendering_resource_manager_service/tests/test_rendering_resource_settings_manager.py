@@ -58,6 +58,7 @@ class TestSessionManager(TestCase):
         params['process_rest_parameters_format'] = '--rest {$rest_hostname}:${rest_port}'
         params['scheduler_rest_parameters_format'] = '--rest $SLURMD_NODENAME:${rest_port}'
         params['graceful_exit'] = True
+        params['wait_until_running'] = True
         status = manager.create(params)
         nt.assert_true(status[0] == 201)
         # Delete Settings
@@ -76,6 +77,7 @@ class TestSessionManager(TestCase):
         params['process_rest_parameters_format'] = '--rest {$rest_hostname}:${rest_port}'
         params['scheduler_rest_parameters_format'] = '--rest $SLURMD_NODENAME:${rest_port}'
         params['graceful_exit'] = True
+        params['wait_until_running'] = True
         status = manager.create(params)
         nt.assert_true(status[0] == 201)
         # Duplicate
@@ -106,6 +108,7 @@ class TestSessionManager(TestCase):
         params['process_rest_parameters_format'] = '--rest {$rest_hostname}:${rest_port}'
         params['scheduler_rest_parameters_format'] = '--rest $SLURMD_NODENAME:${rest_port}'
         params['graceful_exit'] = True
+        params['wait_until_running'] = True
         status = manager.create(params)
         nt.assert_true(status[0] == 201)
 
@@ -119,6 +122,7 @@ class TestSessionManager(TestCase):
         params['scheduler_rest_parameters_format'] = \
             '--rest $SLURMD_NODENAME:${rest_port}:${rest_schema}'
         params['graceful_exit'] = True
+        params['wait_until_running'] = True
         status = manager.create(params)
         nt.assert_true(status[0] == 201)
         status = manager.list(RenderingResourceSettingsSerializer)
@@ -135,7 +139,8 @@ class TestSessionManager(TestCase):
                     '"--rest {$rest_hostname}:${rest_port}:${rest_schema}", ' \
                     '"scheduler_rest_parameters_format": ' \
                     '"--rest $SLURMD_NODENAME:${rest_port}:${rest_schema}", ' \
-                    '"graceful_exit": true}, ' \
+                    '"graceful_exit": true, ' \
+                    '"wait_until_running": true}, ' \
                     '{"id": "rtneuron", ' \
                     '"command_line": "rtneuron-app.py", ' \
                     '"environment_variables": ' \
@@ -145,7 +150,8 @@ class TestSessionManager(TestCase):
                     '"--rest {$rest_hostname}:${rest_port}", ' \
                     '"scheduler_rest_parameters_format": ' \
                     '"--rest $SLURMD_NODENAME:${rest_port}", ' \
-                    '"graceful_exit": true}' \
+                    '"graceful_exit": true, ' \
+                    '"wait_until_running": true}' \
                     ']'
         nt.assert_true(value == reference)
 
@@ -161,6 +167,7 @@ class TestSessionManager(TestCase):
         params['process_rest_parameters_format'] = '--rest {$rest_hostname}:${rest_port}'
         params['scheduler_rest_parameters_format'] = '--rest $SLURMD_NODENAME:${rest_port}'
         params['graceful_exit'] = True
+        params['wait_until_running'] = True
         status = manager.create(params)
         nt.assert_true(status[0] == 201)
 

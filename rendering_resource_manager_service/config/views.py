@@ -55,7 +55,7 @@ class RenderingResourceSettingsSerializer(serializers.ModelSerializer):
                   'modules',
                   'process_rest_parameters_format',
                   'scheduler_rest_parameters_format',
-                  'graceful_exit')
+                  'graceful_exit', 'wait_until_running')
 
 
 class RenderingResourceSettingsDetailsViewSet(viewsets.ModelViewSet):

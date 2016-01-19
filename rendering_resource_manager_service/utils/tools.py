@@ -22,6 +22,11 @@
 # All rights reserved. Do not distribute without further notice.
 
 
+"""
+This module provides various utility functions
+"""
+
+
 def get_request_headers(request):
     """
     Reads headers from given http request and returns them as a dictionary
