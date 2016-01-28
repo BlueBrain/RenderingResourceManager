@@ -40,6 +40,7 @@ class RenderingResourceSettings(models.Model):
     process_rest_parameters_format = models.CharField(max_length=1024, default='')
     scheduler_rest_parameters_format = models.CharField(max_length=1024, default='')
     graceful_exit = models.BooleanField(default=True)
+    wait_until_running = models.BooleanField(default=True)
 
     class Meta(object):
         """
@@ -51,7 +52,7 @@ class RenderingResourceSettings(models.Model):
             'modules',
             'process_rest_parameters_format',
             'scheduler_rest_parameters_format',
-            'graceful_exit')
+            'graceful_exit', 'wait_until_running')
 
     def __str__(self):
         return '%s' % self.id

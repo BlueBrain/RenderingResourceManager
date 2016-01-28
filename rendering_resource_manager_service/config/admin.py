@@ -37,7 +37,7 @@ class RenderingResourceSettingsAdmin(admin.ModelAdmin):
     """
     fields = ['id', 'command_line', 'environment_variables', 'modules',
               'process_rest_parameters_format', 'scheduler_rest_parameters_format',
-              'graceful_exit']
+              'graceful_exit', 'wait_until_running']
 
 try:
     admin.site.unregister(RenderingResourceSettings)
