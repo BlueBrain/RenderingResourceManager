@@ -31,6 +31,7 @@ and ensures persistent storage in a database
 
 from rendering_resource_manager_service.config.models import RenderingResourceSettings
 import rendering_resource_manager_service.utils.custom_logging as log
+from rendering_resource_manager_service.utils.tools import str2bool
 from django.db import IntegrityError, transaction
 from rest_framework.renderers import JSONRenderer
 
@@ -55,8 +56,8 @@ class RenderingResourceSettingsManager(object):
                 modules=str(params['modules']),
                 process_rest_parameters_format=str(params['process_rest_parameters_format']),
                 scheduler_rest_parameters_format=str(params['scheduler_rest_parameters_format']),
-                graceful_exit=params['graceful_exit'],
-                wait_until_running=params['wait_until_running'])
+                graceful_exit=str2bool(params['graceful_exit']),
+                wait_until_running=str2bool(params['wait_until_running']))
             with transaction.atomic():
                 settings.save(force_insert=True)
             msg = 'Rendering Resource ' + settings_id + ' successfully configured'
@@ -82,8 +83,8 @@ class RenderingResourceSettingsManager(object):
                 str(params['process_rest_parameters_format'])
             settings.scheduler_rest_parameters_format = \
                 str(params['scheduler_rest_parameters_format'])
-            settings.graceful_exit = params['graceful_exit']
-            settings.wait_until_running = params['wait_until_running']
+            settings.graceful_exit = str2bool(params['graceful_exit'])
+            settings.wait_until_running = str2bool(params['wait_until_running'])
             with transaction.atomic():
                 settings.save()
             return [200, '']
