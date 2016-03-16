@@ -31,6 +31,7 @@ import signal
 import time
 import subprocess
 import urllib2
+import json
 
 import rendering_resource_manager_service.utils.custom_logging as log
 from rendering_resource_manager_service.config.management import \
@@ -87,11 +88,13 @@ class ProcessManager(object):
                 stdin=subprocess.PIPE, stdout=subprocess.PIPE)
             session_info.process_pid = process.pid
             session_info.status = SESSION_STATUS_STARTING
-            return [200, settings.id + ' successfully started [' +
-                    str(session_info.process_pid) + ']']
+            response = json.dumps(
+                    {'message': 'Process started', 'processId': str(session_info.process_pid)})
+            return [200, response]
         except RenderingResourceSettings.DoesNotExist as e:
             log.error(str(e))
-            return [404, str(e)]
+            response = json.dumps({'contents': str(e)})
+            return [404, response]
 
     @staticmethod
     def query(session_info):

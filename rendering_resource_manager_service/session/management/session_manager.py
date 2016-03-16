@@ -109,14 +109,17 @@ class SessionManager(object):
                     session.save(force_insert=True)
                 msg = 'Session ' + str(session_id) + ' successfully created'
                 log.debug(1, msg)
-                return [http_status.HTTP_201_CREATED, msg]
+                response = json.dumps({'contents': str(msg)})
+                return [http_status.HTTP_201_CREATED, response]
             except IntegrityError as e:
                 log.error(e)
-                return [http_status.HTTP_409_CONFLICT, e]
+                response = json.dumps({'contents': str(e)})
+                return [http_status.HTTP_409_CONFLICT, response]
         else:
             msg = 'Session creation is currently suspended'
             log.error(msg)
-            return [http_status.HTTP_403_FORBIDDEN, msg]
+            response = json.dumps({'contents': str(msg)})
+            return [http_status.HTTP_403_FORBIDDEN, response]
 
     @classmethod
     def get_session(cls, session_id, request, serializer):
@@ -130,20 +133,24 @@ class SessionManager(object):
             session = Session.objects.get(id=session_id)
         except Session.DoesNotExist as e:
             log.error(e)
-            return [http_status.HTTP_404_NOT_FOUND, e]
+            response = json.dumps({'contents': str(e)})
+            return [http_status.HTTP_404_NOT_FOUND, response]
 
         if request.method == consts.REST_VERB_GET:
             serializer = serializer(session)
-            return [http_status.HTTP_200_OK, JSONResponse(serializer.data)]
+            response = json.dumps({'contents': str(serializer.data)})
+            return [http_status.HTTP_200_OK, response]
 
         elif request.method == consts.REST_VERB_PUT:
             data = JSONParser().parse(request)
             serializer = serializer(session, data=data)
             if serializer.is_valid():
                 serializer.save()
-                return [http_status.HTTP_200_OK, serializer.data]
+                response = json.dumps({'contents': str(serializer.data)})
+                return [http_status.HTTP_200_OK, response]
             log.error(serializer.errors)
-            return [http_status.HTTP_400_BAD_REQUEST, serializer.errors]
+            response = json.dumps({'contents': str(serializer.errors)})
+            return [http_status.HTTP_400_BAD_REQUEST, response]
 
     @classmethod
     def delete_session(cls, session_id):
@@ -165,13 +172,16 @@ class SessionManager(object):
             session.delete()
             msg = str(session_id) + ' successfully destroyed'
             log.info(1, msg)
-            return [http_status.HTTP_200_OK, msg]
+            response = json.dumps({'contents': str(msg)})
+            return [http_status.HTTP_200_OK, response]
         except Session.DoesNotExist as e:
             log.error(str(e))
-            return [http_status.HTTP_404_NOT_FOUND, str(e)]
+            response = json.dumps({'contents': str(e)})
+            return [http_status.HTTP_404_NOT_FOUND, response]
         except Exception as e:
             log.error(str(e))
-            return [http_status.HTTP_404_NOT_FOUND, str(e)]
+            response = json.dumps({'contents': str(e)})
+            return [http_status.HTTP_500_INTERNAL_ERROR, response]
 
     @classmethod
     def list_sessions(cls, serializer):
@@ -239,10 +249,10 @@ class SessionManager(object):
                 req = urllib2.Request(url=url)
                 response = urllib2.urlopen(req).read()
                 js = json.loads(response)
-                if len(js['subscribed']) == 0 and len(js['published']) == 0:
-                    return [http_status.HTTP_503_SERVICE_UNAVAILABLE, 'No vocabulary defined']
-                else:
-                    return [http_status.HTTP_200_OK, response]
+                #if len(js['subscribed']) == 0 and len(js['published']) == 0:
+                #    return [http_status.HTTP_503_SERVICE_UNAVAILABLE, 'No vocabulary defined']
+                #else:
+                return [http_status.HTTP_200_OK, response]
             except urllib2.URLError as e:
                 log.info(1, str(e))
                 return [http_status.HTTP_503_SERVICE_UNAVAILABLE, str(e)]
@@ -292,7 +302,6 @@ class SessionManager(object):
                 # requests.
                 rr_settings = \
                     manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
-                print rr_settings.wait_until_running
                 if not rr_settings.wait_until_running:
                     log.info(1, 'Rendering resource is now RUNNING!')
                     session.status = SESSION_STATUS_RUNNING

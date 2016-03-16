@@ -76,4 +76,4 @@ RRM_SPECIFIC_COMMAND_RESUME = 'resume'
 RRM_SPECIFIC_COMMAND_SUSPEND = 'suspend'
 
 # Rendering resource commands
-RR_SPECIFIC_COMMAND_VOCABULARY = 'vocabulary'
+RR_SPECIFIC_COMMAND_VOCABULARY = 'zerobuf/render/camera'

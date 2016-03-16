@@ -21,19 +21,25 @@
 # 51 Franklin Street, Fifth Floor, Boston, MA 02110-1301 USA.
 # All rights reserved. Do not distribute without further notice.
 
-# Remove desktop icons
+#!/bin/sh
+#[ -r /etc/sysconfig/i18n ] && . /etc/sysconfig/i18n
+
+# Disable desktop
 gconftool-2 --type boolean --set /apps/nautilus/desktop/computer_icon_visible false
 gconftool-2 --type boolean --set /apps/nautilus/desktop/trash_icon_visible false
 gconftool-2 --type boolean --set /apps/nautilus/desktop/home_icon_visible false
+gconftool-2 --type boolean --set /apps/nautilus/lockdown/disable_context_menus 1
+gconftool-2 --type boolean --set /apps/nautilus/preferences/show_desktop false
+gconftool-2 -s -t list --list-type string /desktop/gnome/session/required_components_list [filemanager,windowmanager]
+gconftool-2 -s -t string /desktop/gnome/session/required_components/panel ''
 
-# Start VNC Server
+# Start VNC server
 export LANG
 export SYSFONT
 vncconfig -iconic &
 unset SESSION_MANAGER
 unset DBUS_SESSION_BUS_ADDRESS
 OS=`uname -s`
-rm -f *.log *.pid
 module purge
 module load BBP/viz/latest
 export PARAMS=
@@ -42,14 +48,13 @@ do
   export PARAMS="$PARAMS $1"
   shift
 done
-vnc_response="$(vncserver -geometry 640x480 2>&1)"
+vnc_response="$(vncserver -geometry 1920x1080 2>&1)"
 export vnc_display=`echo "${vnc_response}" | sed '/New.*desktop.*is/!d' | awk -F" desktop is " '{print $2}' | awk -F":" '{print $2}'`
 echo "VNC Display:${vnc_display}"
 
-# Start IPython notebook
-echo $PARAMS>params.log
-EQ_WINDOW_IATTR_HINT_FULLSCREEN=1 DISPLAY=:${vnc_display} vglrun ipython $PARAMS 1>&2
-
-# Stop VNC Server
+# Start Livre
+DISPLAY=:${vnc_display} vglrun livre $PARAMS 1>&2
+    
+# Kill VNC server
 vncserver -kill :${vnc_display} 1>&2
 
