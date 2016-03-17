@@ -180,7 +180,7 @@ SLURM_PROJECT = 'TO_BE_MODIFIED'
 SOCIAL_AUTH_HBP_KEY = 'TO_BE_MODIFIED'
 
 # Image Streaming Service URL
-IMAGE_STREAMING_SERVICE_URL = 'http://localhost:8385/image-streaming-service/v1'
+IMAGE_STREAMING_SERVICE_URL = 'TO_BE_MODIFIED'
 
 try:
     from local_settings import * # pylint: disable=F0401,W0403,W0401,W0614

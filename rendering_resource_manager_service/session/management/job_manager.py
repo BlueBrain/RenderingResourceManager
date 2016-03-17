@@ -32,6 +32,7 @@ import subprocess
 import urllib2
 import traceback
 from threading import Lock
+import json
 
 import rendering_resource_manager_service.session.management.session_manager_settings as settings
 import rendering_resource_manager_service.utils.custom_logging as log
@@ -111,10 +112,12 @@ class JobManager(object):
                                              parameters, environment_variables, modules)
             session.status = SESSION_STATUS_SCHEDULED
             session.save()
-            return [200, 'Job ' + str(session.job_id) + ' now scheduled']
+            response = json.dumps({'message': 'Job scheduled', 'jobId': session.job_id})
+            return [200, response]
         except saga.SagaException as e:
             log.error(str(e))
-            return [400, str(e)]
+            response = json.dumps({'contents': str(e)})
+            return [400, response]
         finally:
             self._mutex.release()
 

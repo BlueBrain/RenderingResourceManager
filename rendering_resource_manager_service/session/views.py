@@ -36,6 +36,7 @@ import traceback
 from rest_framework import serializers, viewsets
 from django.http import HttpResponse
 import management.session_manager_settings as consts
+import rendering_resource_manager_service.service.settings as settings
 import rendering_resource_manager_service.utils.custom_logging as log
 import rendering_resource_manager_service.utils.tools as tools
 from rendering_resource_manager_service.session.models import Session
@@ -180,6 +181,7 @@ class SessionViewSet(viewsets.ModelViewSet):
                 session_id, request.DATA['owner'], request.DATA['renderer_id'])
             response = HttpResponse(status=status[0], content=status[1])
             response.set_cookie(consts.COOKIE_ID, session_id)
+            log.info(1, 'Session created ' + str(session_id))
             return response
         except KeyError as e:
             return HttpResponse(status=401, content=str(e))
@@ -216,6 +218,7 @@ class SessionViewSet(viewsets.ModelViewSet):
         # remove session from db
         status = sm.delete_session(session_id)
         message = status[1] + ': ' + message
+        log.info(1, 'Session deleted ' + str(session_id))
         return HttpResponse(status=status[0], content=message)
 
 
@@ -268,6 +271,7 @@ class CommandViewSet(viewsets.ModelViewSet):
             elif command == 'err':
                 status = cls.__rendering_resource_err_log(session)
                 response = HttpResponse(status=status[0], content=status[1])
+
             elif command == 'job':
                 status = cls.__job_information(session)
                 response = HttpResponse(status=status[0], content=status[1])
@@ -275,7 +279,10 @@ class CommandViewSet(viewsets.ModelViewSet):
                 status = cls.__image_feed(session_id)
                 response = HttpResponse(status=status[0], content=status[1])
             else:
-                response = cls.__forward_request(session, command, request)
+                url = request.get_full_path()
+                prefix = settings.BASE_URL_PREFIX + '/session/'
+                cmd = url[url.find(prefix) + len(prefix)+1: len(url)]
+                response = cls.__forward_request(session, cmd, request)
             return response
         except KeyError as e:
             log.debug(1, str(traceback.format_exc(e)))
@@ -357,10 +364,11 @@ class CommandViewSet(viewsets.ModelViewSet):
         :rtype : An HTTP response containing the status and description of the command
         """
         # check if the hostname of the rendering resource is currently available
-        contents = ''
+        contents = 'Rendering resource is currently unavailable'
         if session.job_id:
             contents = job_manager.globalJobManager.rendering_resource_out_log(session)
-        return [200, contents]
+        response = json.dumps({'contents': str(contents)})
+        return [200, response]
 
     @classmethod
     def __rendering_resource_err_log(cls, session):
@@ -370,10 +378,11 @@ class CommandViewSet(viewsets.ModelViewSet):
         :rtype : An HTTP response containing the status and description of the command
         """
         # check if the hostname of the rendering resource is currently available
-        contents = ''
+        contents = 'Rendering resource is currently unavailable'
         if session.job_id:
             contents = job_manager.globalJobManager.rendering_resource_err_log(session)
-        return [200, contents]
+        response = json.dumps({'contents': str(contents)})
+        return [200, response]
 
     @classmethod
     def __job_information(cls, session):
@@ -383,10 +392,11 @@ class CommandViewSet(viewsets.ModelViewSet):
         :rtype : An HTTP response containing the status and description of the command
         """
         # check if the hostname of the rendering resource is currently available
-        contents = ''
+        contents = 'Rendering resource is currently unavailable'
         if session.job_id:
             contents = job_manager.globalJobManager.job_information(session)
-        return [200, contents]
+        response = json.dumps({'contents': str(contents)})
+        return [200, response]
 
     @classmethod
     def __session_status(cls, session):

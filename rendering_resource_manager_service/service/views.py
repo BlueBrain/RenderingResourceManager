@@ -37,7 +37,6 @@ HBP_ENV_URL = 'https://collab.humanbrainproject.eu/config.json'
 def config(request):
     '''Render the config file'''
 
-    print str(HBP_ENV_URL)
     res = urllib2.urlopen(urllib2.Request(url=HBP_ENV_URL))
     conf = res.read()
     res.close()
