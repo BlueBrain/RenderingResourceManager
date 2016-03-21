@@ -28,6 +28,7 @@
 This modules defines the data structure used by the rendering resource manager to manager
 user session
 """
+import requests
 import urllib2
 import random
 import json
@@ -450,24 +451,25 @@ class CommandViewSet(viewsets.ModelViewSet):
             input_data = None
             if request.DATA:
                 input_data = json.dumps(request.DATA)
-            req = urllib2.Request(url=url, headers=headers, data=input_data)
-            req.get_method = lambda: request.method
-            response = urllib2.urlopen(req)
+            response = requests.request(
+                    method=request.method, url=url, headers=headers, data=input_data)
 
-            # Response processing
-            data_size = int(response.headers['content-length'])
-            log.debug(1, 'Reading bytes ' + str(data_size) + ' bytes')
-            data = response.read()
-            response.close()
+            if response.status_code == 200:
+                # Response processing
+                data_size = int(response.headers['content-length'])
+                log.debug(1, 'Reading bytes ' + str(data_size) + ' bytes')
+                data = response.content
+                response.close()
 
-            # Make sure that the number of received bytes is correct
-            missing_bytes = int(response.headers['content-length']) - len(data)
-            if missing_bytes != 0:
-                msg = 'Missing bytes:  ' + str(missing_bytes)
-                log.error(msg)
-                return HttpResponse(status=400, content=msg)
-            else:
-                return HttpResponse(status=200, content=data)
+                # Make sure that the number of received bytes is correct
+                missing_bytes = int(response.headers['content-length']) - len(data)
+                if missing_bytes != 0:
+                    msg = 'Missing bytes:  ' + str(missing_bytes)
+                    log.error(msg)
+                    return HttpResponse(status=400, content=msg)
+                else:
+                    return HttpResponse(status=200, content=data)
+            return HttpResponse(status=response.status_code, content=response.content)
         except urllib2.URLError as e:
             # Check that job or process is still running
             if session.job_id:
