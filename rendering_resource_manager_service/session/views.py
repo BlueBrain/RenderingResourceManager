@@ -29,7 +29,6 @@ This modules defines the data structure used by the rendering resource manager t
 user session
 """
 import requests
-import urllib2
 import random
 import json
 import traceback
@@ -469,8 +468,11 @@ class CommandViewSet(viewsets.ModelViewSet):
                     return HttpResponse(status=400, content=msg)
                 else:
                     return HttpResponse(status=200, content=data)
-            return HttpResponse(status=response.status_code, content=response.content)
-        except urllib2.URLError as e:
+            else:
+                msg = response.content
+                response.close()
+                return HttpResponse(status=response.status_code, content=msg)
+        except requests.exceptions.RequestException as e:
             # Check that job or process is still running
             if session.job_id:
                 if job_manager.globalJobManager.hostname(session.job_id) == 'FAILED':
