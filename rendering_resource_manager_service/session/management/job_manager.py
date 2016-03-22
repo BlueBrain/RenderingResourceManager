@@ -40,7 +40,8 @@ from rendering_resource_manager_service.config.management import \
     rendering_resource_settings_manager as manager
 import saga
 import re
-from rendering_resource_manager_service.session.models import SESSION_STATUS_SCHEDULED
+from rendering_resource_manager_service.session.models import \
+    SESSION_STATUS_STARTING, SESSION_STATUS_RUNNING, SESSION_STATUS_SCHEDULED
 import rendering_resource_manager_service.service.settings as global_settings
 
 
@@ -121,14 +122,14 @@ class JobManager(object):
         finally:
             self._mutex.release()
 
-    def create_job(self, id, executable, params, environment, modules):
+    def create_job(self, job_id, executable, params, environment, modules):
         """
         Launch a job on the cluster with the given executable and parameters
         :return: The ID of the job
         """
         log.debug(1, 'Creating job for ' + executable)
         description = saga.job.Description()
-        description.name = settings.SLURM_JOB_NAME_PREFIX + id
+        description.name = settings.SLURM_JOB_NAME_PREFIX + job_id
         description.executable = 'module purge\n'
         for module in modules:
             description.executable += 'module load ' + module.strip() + '\n'
@@ -137,8 +138,8 @@ class JobManager(object):
         description.arguments = params
         description.queue = settings.SLURM_QUEUE
         description.project = global_settings.SLURM_PROJECT
-        description.output = settings.SLURM_OUTPUT_PREFIX + id + settings.SLURM_OUT_FILE
-        description.error = settings.SLURM_OUTPUT_PREFIX + id + settings.SLURM_ERR_FILE
+        description.output = settings.SLURM_OUTPUT_PREFIX + job_id + settings.SLURM_OUT_FILE
+        description.error = settings.SLURM_OUTPUT_PREFIX + job_id + settings.SLURM_ERR_FILE
 
         # Add environment variables
         environment_variables = ''
@@ -340,16 +341,18 @@ class JobManager(object):
         :return: A string containing the error log
         """
         try:
-            job_id_as_int = re.search(r'(?=)-\[(\w+)\]', session.job_id).group(1)
-            rr_settings = \
-                manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
-            filename = settings.SLURM_OUTPUT_PREFIX + \
-                       str(rr_settings.id) + filename
-            filename = filename.replace('%A', str(job_id_as_int), 1)
-            result = filename + ':\n'
-            result += JobManager.check_output(['ssh', '-i', global_settings.SLURM_KEY,
-                                               global_settings.SLURM_USERNAME + '@' +
-                                               settings.SLURM_HOST, 'cat ', filename])
+            result = 'Not available'
+            if session.status in [SESSION_STATUS_STARTING, SESSION_STATUS_RUNNING]:
+                job_id_as_int = re.search(r'(?=)-\[(\w+)\]', session.job_id).group(1)
+                rr_settings = \
+                    manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
+                filename = settings.SLURM_OUTPUT_PREFIX + \
+                           str(rr_settings.id) + filename
+                filename = filename.replace('%A', str(job_id_as_int), 1)
+                result = filename + ':\n'
+                result += JobManager.check_output(['ssh', '-i', global_settings.SLURM_KEY,
+                                                   global_settings.SLURM_USERNAME + '@' +
+                                                   settings.SLURM_HOST, 'cat ', filename])
             return result
         except IOError as e:
             return str(e)

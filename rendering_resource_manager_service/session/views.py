@@ -281,7 +281,7 @@ class CommandViewSet(viewsets.ModelViewSet):
             else:
                 url = request.get_full_path()
                 prefix = settings.BASE_URL_PREFIX + '/session/'
-                cmd = url[url.find(prefix) + len(prefix)+1: len(url)]
+                cmd = url[url.find(prefix) + len(prefix) + 1: len(url)]
                 response = cls.__forward_request(session, cmd, request)
             return response
         except KeyError as e:
@@ -423,6 +423,11 @@ class CommandViewSet(viewsets.ModelViewSet):
 
     @classmethod
     def __image_feed(cls, session_id):
+        """
+        Get the route to image streaming server
+        :param : session_id: Id of the session holding the rendering resource
+        :rtype : An HTTP response containing uri of the image streaming server for the given session
+        """
         ifm = image_feed_manager.ImageFeedManager(session_id)
         return ifm.get_route()
 
@@ -440,7 +445,6 @@ class CommandViewSet(viewsets.ModelViewSet):
         if status[0] != 200:
             return HttpResponse(status=status[0], content=status[1])
 
-        url = ''
         try:
             # Any other command is forwarded to the rendering resource
             url = 'http://' + session.http_host + ':' + str(session.http_port) + '/' + command
@@ -451,36 +455,11 @@ class CommandViewSet(viewsets.ModelViewSet):
             if request.DATA:
                 input_data = json.dumps(request.DATA)
             response = requests.request(
-                    method=request.method, url=url, headers=headers, data=input_data)
+                method=request.method, timeout=settings.REQUEST_TIMEOUT,
+                url=url, headers=headers, data=input_data)
 
-            if response.status_code == 200:
-                # Response processing
-                data_size = int(response.headers['content-length'])
-                log.debug(1, 'Reading bytes ' + str(data_size) + ' bytes')
-                data = response.content
-                response.close()
-
-                # Make sure that the number of received bytes is correct
-                missing_bytes = int(response.headers['content-length']) - len(data)
-                if missing_bytes != 0:
-                    msg = 'Missing bytes:  ' + str(missing_bytes)
-                    log.error(msg)
-                    return HttpResponse(status=400, content=msg)
-                else:
-                    return HttpResponse(status=200, content=data)
-            else:
-                msg = response.content
-                response.close()
-                return HttpResponse(status=response.status_code, content=msg)
+            data = response.content
+            response.close()
+            return HttpResponse(status=response.status_code, content=data)
         except requests.exceptions.RequestException as e:
-            # Check that job or process is still running
-            if session.job_id:
-                if job_manager.globalJobManager.hostname(session.job_id) == 'FAILED':
-                    session_manager.SessionManager.delete_session(session.id)
-                    return HttpResponse(status=400,
-                                        content=session.renderer_id + ' is down')
-            else:
-                msg = str(traceback.format_exc(e))
-                log.debug(1, msg)
-                return HttpResponse(status=400,
-                                    content='Failed to contact rendering resource: ' + url)
+            return HttpResponse(status=400, content=str(e))
