@@ -41,7 +41,7 @@ import process_manager
 # Default values
 KEEP_ALIVE_TIMEOUT = 600  # Delay after which a session is closed if no keep-alive
 # message is received (in seconds)
-KEEP_ALIVE_FREQUENCY = 10  # Frequency at which the keep-alive messages are checked
+KEEP_ALIVE_FREQUENCY = 100  # Frequency at which the keep-alive messages are checked
 
 
 class KeepAliveThread(threading.Thread):

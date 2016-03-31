@@ -27,7 +27,7 @@ The job manager is in charge of managing slurm jobs.
 
 # pylint: disable=W0403
 # pylint: disable=E1101
-import urllib2
+import requests
 import json
 import rendering_resource_manager_service.service.settings as settings
 from rendering_resource_manager_service.session.models import Session
@@ -72,7 +72,7 @@ class ImageFeedManager(object):
         Queries the image streaming service for the route corresponding to the
         current session
         """
-        # Check if route already exists'
+        log.info(1, 'Check if route already exists')
         status = self.__do_request('GET', '')
         if status[0] == 200:
             log.info(1, 'Route exists: ' + str(status[1]))
@@ -80,9 +80,9 @@ class ImageFeedManager(object):
         elif status[0] == 404:
             # Create new route
             log.error('Route does not exist for session ' + str(self._session_id) +
-                      ', creating it')
+                      ', creating it with ' + str(self.__get_uri()))
             status = self.add_route()
-            if status[0] == 200:
+            if status[0] == 201:
                 return self.__do_request('GET', '')
             else:
                 response = 'Image streaming service (' + settings.IMAGE_STREAMING_SERVICE_URL + \
@@ -104,16 +104,18 @@ class ImageFeedManager(object):
         """
         try:
             url = settings.IMAGE_STREAMING_SERVICE_URL + '/route'
-            req = urllib2.Request(url=url, data=uri)
-            req.get_method = lambda: method
-            req.add_header('Content-Type', 'application/json')
-            req.add_header('Cookie', COOKIE_ID + '=' + str(self._session_id))
-            response = urllib2.urlopen(req).read()
-            log.info(1, '__do_request(' + method + ',' + uri + '=' + response)
-            return [200, response]
-        except urllib2.HTTPError as e:
+            log.info(1, '__do_request(' + method + ', ' + url + ')')
+            headers = {'Content-Type': 'application/json',
+                       'Cookie': COOKIE_ID + '=' + str(self._session_id)}
+            response = requests.request(
+                method=method, timeout=settings.REQUEST_TIMEOUT,
+                url=url, headers=headers, data=uri)
+            log.info(1, 'Response: ' + response.text)
+            response.close()
+            return [response.status_code, response]
+        except requests.exceptions.HTTPError as e:
             log.error(str(e))
             return [e.code, str(e)]
-        except urllib2.URLError as e:
+        except requests.exceptions.RequestException as e:
             log.error(str(e))
-            return [401, str(e)]
+            return [e.code, str(e)]
