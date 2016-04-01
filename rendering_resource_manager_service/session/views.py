@@ -3,6 +3,7 @@
 # pylint: disable=W0403
 # pylint: disable=E1101
 # pylint: disable=R0901
+# pylint: disable=R0915
 
 # Copyright (c) 2014-2015, Human Brain Project
 #                          Cyrille Favreau <cyrille.favreau@epfl.ch>
@@ -44,6 +45,8 @@ from rendering_resource_manager_service.session.management import job_manager
 from rendering_resource_manager_service.session.management import process_manager
 from rendering_resource_manager_service.session.management import image_feed_manager
 import management.session_manager as session_manager
+from rendering_resource_manager_service.session.models import \
+    SESSION_STATUS_GETTING_HOSTNAME, SESSION_STATUS_SCHEDULED
 
 
 class SessionSerializer(serializers.ModelSerializer):
@@ -209,13 +212,13 @@ class SessionViewSet(viewsets.ModelViewSet):
         """
         sm = session_manager.SessionManager()
         session_id = sm.get_session_id_from_request(request)
-        # remove image feed route if it exists
+        log.info(1, 'Remove image feed route if it exists')
         ifm = image_feed_manager.ImageFeedManager(session_id)
         status = ifm.remove_route()
         message = ''
         if status[0] != 200:
             message = status[1]
-        # remove session from db
+        log.info(1, 'Remove session from db')
         status = sm.delete_session(session_id)
         message = status[1] + ': ' + message
         log.info(1, 'Session deleted ' + str(session_id))
@@ -286,14 +289,17 @@ class CommandViewSet(viewsets.ModelViewSet):
             return response
         except KeyError as e:
             log.debug(1, str(traceback.format_exc(e)))
-            return HttpResponse(status=404, content='Cookie ' + str(e) + ' is missing')
+            response = json.dumps({'contents': 'Cookie ' + str(e) + ' is missing'})
+            return HttpResponse(status=404, content=response)
         except Session.DoesNotExist as e:
             log.debug(1, str(traceback.format_exc(e)))
-            return HttpResponse(status=404,
-                                content='Session does not exist')
+            response = json.dumps({'contents': 'Session does not exist'})
+            return HttpResponse(status=404, content=response)
         except Exception as e:
-            log.error(str(traceback.format_exc(e)))
-            return HttpResponse(status=500, content=str(traceback.format_exc(e)))
+            msg = traceback.format_exc(e)
+            log.error(str(msg))
+            response = json.dumps({'contents': str(msg)})
+            return HttpResponse(status=500, content=response)
 
     @classmethod
     def __schedule_job(cls, session, parameters, environment):
@@ -327,7 +333,8 @@ class CommandViewSet(viewsets.ModelViewSet):
         else:
             msg = 'process is already started'
             log.error(msg)
-            return HttpResponse(status=401, content=msg)
+            response = json.dumps({'contents': str(msg)})
+            return HttpResponse(status=401, content=response)
 
     @classmethod
     def __verify_hostname(cls, session):
@@ -336,25 +343,37 @@ class CommandViewSet(viewsets.ModelViewSet):
         to populate it if null
         :param : session: Session holding the rendering resource
         """
-        if session.job_id and session.http_host == '':
-            log.debug(1, 'Querying JOB hostname for job id: ' + str(session.job_id))
+        log.info(1, 'Verifying hostname ' + session.http_host + ' for session ' + str(session.id))
+        if not session.status == SESSION_STATUS_GETTING_HOSTNAME and \
+                session.job_id and session.http_host == '':
+            session.status = SESSION_STATUS_GETTING_HOSTNAME
+            session.save()
+            log.info(1, 'Querying JOB hostname for job id: ' + str(session.job_id))
             hostname = job_manager.JobManager.hostname(session.job_id)
             if hostname == '':
                 msg = 'Job scheduled but ' + session.renderer_id + ' is not yet running'
                 log.error(msg)
-                return [404, msg]
+                session.status = SESSION_STATUS_SCHEDULED
+                session.save()
+                response = json.dumps({'contents': str(msg)})
+                return [404, response]
             elif hostname == 'FAILED':
                 sm = session_manager.SessionManager()
                 sm.delete_session(session.id)
-                return [404, 'Job as been cancelled']
+                msg = 'Job as been cancelled'
+                log.error(msg)
+                response = json.dumps({'contents': str(msg)})
+                return [404, response]
             else:
                 session.http_host = hostname
-                msg = 'Resolved hostname for job ' + str(session.job_id) + ' to ' +\
+                session.save()
+                msg = 'Resolved hostname for job ' + str(session.job_id) + ' to ' + \
                       str(session.http_host)
                 log.info(1, msg)
-                session.save()
-                return [200, msg]
-        return [200, 'Job is running on host ' + session.http_host]
+                response = json.dumps({'contents': str(msg)})
+                return [200, response]
+        response = json.dumps({'contents': str('Job is running on host ' + session.http_host)})
+        return [200, response]
 
     @classmethod
     def __rendering_resource_out_log(cls, session):
@@ -428,6 +447,7 @@ class CommandViewSet(viewsets.ModelViewSet):
         :param : session_id: Id of the session holding the rendering resource
         :rtype : An HTTP response containing uri of the image streaming server for the given session
         """
+        log.info(1, 'Requesting image feed')
         ifm = image_feed_manager.ImageFeedManager(session_id)
         return ifm.get_route()
 
@@ -462,4 +482,5 @@ class CommandViewSet(viewsets.ModelViewSet):
             response.close()
             return HttpResponse(status=response.status_code, content=data)
         except requests.exceptions.RequestException as e:
-            return HttpResponse(status=400, content=str(e))
+            response = json.dumps({'contents': str(e)})
+            return HttpResponse(status=400, content=response)

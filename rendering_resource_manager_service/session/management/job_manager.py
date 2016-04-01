@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # pylint: disable=W0403
+# pylint: disable=R0915
 
 # Copyright (c) 2014-2015, Human Brain Project
 #                          Cyrille Favreau <cyrille.favreau@epfl.ch>
@@ -41,7 +42,8 @@ from rendering_resource_manager_service.config.management import \
 import saga
 import re
 from rendering_resource_manager_service.session.models import \
-    SESSION_STATUS_STARTING, SESSION_STATUS_RUNNING, SESSION_STATUS_SCHEDULED
+    SESSION_STATUS_STARTING, SESSION_STATUS_RUNNING, \
+    SESSION_STATUS_SCHEDULING, SESSION_STATUS_SCHEDULED
 import rendering_resource_manager_service.service.settings as global_settings
 
 
@@ -101,6 +103,8 @@ class JobManager(object):
                 str(session.http_port),
                 'rest' + str(rr_settings.id + session.id))
 
+            session.status = SESSION_STATUS_SCHEDULING
+            session.save()
             parameters = rest_parameters.split()
             parameters.append(params)
             environment_variables = rr_settings.environment_variables.split()
@@ -171,10 +175,12 @@ class JobManager(object):
             try:
                 self._mutex.acquire()
                 job = self._service.get_job(job_id)
-                return [200, str(job.get_state())]
+                response = json.dumps({'contents': str(job.get_state())})
+                return [200, response]
             except saga.SagaException as e:
                 log.error(str(e))
-                return [400, str(e.message)]
+                response = json.dumps({'contents': str(e.message)})
+                return [400, response]
             finally:
                 self._mutex.release()
 
@@ -216,7 +222,7 @@ class JobManager(object):
         :return: The hostname of the batch host if the job is running, empty otherwise
         """
         job_id_as_int = re.search(r'(?=)-\[(\w+)\]', job_id).group(1)
-        log.debug(1, 'Job id as int: ' + str(job_id_as_int))
+        log.info(1, 'Job id as int: ' + str(job_id_as_int))
         result = JobManager.check_output(['ssh', '-i', global_settings.SLURM_KEY,
                                           global_settings.SLURM_USERNAME + '@' +
                                           settings.SLURM_HOST, 'scontrol show job', job_id_as_int])
@@ -229,6 +235,7 @@ class JobManager(object):
             # Job is scheduled but not running
             return ''
         hostname = re.search(r'BatchHost=(\w+)', result).group(1)
+        log.info(1, 'Hostname = ' + hostname)
         if hostname.find(settings.SLURM_HOST_DOMAIN) == -1:
             hostname += settings.SLURM_HOST_DOMAIN
         return hostname
@@ -246,7 +253,7 @@ class JobManager(object):
         if session.job_id is not None:
             try:
                 self._mutex.acquire()
-                log.debug(1, 'Stopping job <' + str(session.job_id) + '>')
+                log.info(1, 'Stopping job <' + str(session.job_id) + '>')
                 job = self._service.get_job(session.job_id)
                 wait_timeout = 2.0
                 # pylint: disable=E1101
@@ -273,19 +280,23 @@ class JobManager(object):
                 if job.get_state() == saga.job.CANCELED:
                     msg = 'Job successfully cancelled'
                     log.info(1, msg)
-                    result = [200, msg]
+                    response = json.dumps({'contents': msg})
+                    result = [200, response]
                 else:
                     msg = 'Could not cancel job ' + str(session.job_id)
                     log.info(1, msg)
-                    result = [400, msg]
+                    response = json.dumps({'contents': msg})
+                    result = [400, response]
             except saga.NoSuccess as e:
                 msg = str(traceback.format_exc(e))
                 log.error(msg)
-                result = [400, msg]
+                response = json.dumps({'contents': msg})
+                result = [400, response]
             except saga.DoesNotExist as e:
                 msg = str(traceback.format_exc(e))
                 log.info(1, msg)
-                result = [200, msg]
+                response = json.dumps({'contents': msg})
+                result = [400, response]
             finally:
                 self._mutex.release()
         else:
@@ -308,13 +319,19 @@ class JobManager(object):
                 job = self._service.get_job(job_id)
                 job.signal(signal.SIGKILL)
                 if job.get_state() != saga.job.RUNNING:
-                    return [200, 'Job successfully killed']
+                    response = json.dumps({'contents': 'Job successfully killed'})
+                    return [200, response]
             except saga.SagaException as e:
-                log.error(str(e))
-                return [400, str(e.message)]
+                msg = str(e)
+                log.error(msg)
+                response = json.dumps({'contents': msg})
+                return [400, response]
             finally:
                 self._mutex.release()
-        return [400, 'Could not kill job ' + str(job_id)]
+        msg = 'Could not kill job ' + str(job_id)
+        log.error(msg)
+        response = json.dumps({'contents': msg})
+        return [400, response]
 
     @staticmethod
     def job_information(session):

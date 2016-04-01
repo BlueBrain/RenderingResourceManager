@@ -38,7 +38,7 @@ from django.http import HttpResponse
 from rendering_resource_manager_service.config.models import SystemGlobalSettings
 from rendering_resource_manager_service.session.models import Session, \
     SESSION_STATUS_STOPPED, SESSION_STATUS_SCHEDULED, SESSION_STATUS_STARTING, \
-    SESSION_STATUS_RUNNING, SESSION_STATUS_STOPPING
+    SESSION_STATUS_RUNNING, SESSION_STATUS_STOPPING, SESSION_STATUS_GETTING_HOSTNAME
 from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser
 import rest_framework.status as http_status
@@ -160,20 +160,21 @@ class SessionManager(object):
         :rtype A tuple containing the status and a potential error description
         """
         try:
-            log.info(1, 'Removing session ' + str(session_id))
             session = Session.objects.get(id=session_id)
-            session.status = SESSION_STATUS_STOPPING
-            session.save()
-            if session.process_pid != -1:
-                process_manager.ProcessManager.stop(session)
-            if session.job_id is not None and session.job_id != '':
-                jm = job_manager.JobManager()
-                jm.stop(session)
-            session.delete()
-            msg = str(session_id) + ' successfully destroyed'
-            log.info(1, msg)
-            response = json.dumps({'contents': str(msg)})
-            return [http_status.HTTP_200_OK, response]
+            if not session.status == SESSION_STATUS_STOPPING:
+                log.info(1, 'Removing session ' + str(session_id))
+                session.status = SESSION_STATUS_STOPPING
+                session.save()
+                if session.process_pid != -1:
+                    process_manager.ProcessManager.stop(session)
+                if session.job_id is not None and session.job_id != '':
+                    jm = job_manager.JobManager()
+                    jm.stop(session)
+                session.delete()
+                msg = str(session_id) + ' successfully destroyed'
+                log.info(1, msg)
+                response = json.dumps({'contents': str(msg)})
+                return [http_status.HTTP_200_OK, response]
         except Session.DoesNotExist as e:
             log.error(str(e))
             response = json.dumps({'contents': str(e)})
@@ -182,6 +183,10 @@ class SessionManager(object):
             log.error(str(e))
             response = json.dumps({'contents': str(e)})
             return [http_status.HTTP_500_INTERNAL_ERROR, response]
+        msg = 'Session is currently being destroyed'
+        response = json.dumps({'contents': msg})
+        log.info(1, msg)
+        return [http_status.HTTP_200_OK, response]
 
     @classmethod
     def list_sessions(cls, serializer):
@@ -248,7 +253,7 @@ class SessionManager(object):
                 log.info(1, 'Requesting vocabulary on: ' + str(url))
                 req = urllib2.Request(url=url)
                 response = urllib2.urlopen(req).read()
-                js = json.loads(response)
+                #js = json.loads(response)
                 #if len(js['subscribed']) == 0 and len(js['published']) == 0:
                 #    return [http_status.HTTP_503_SERVICE_UNAVAILABLE, 'No vocabulary defined']
                 #else:
@@ -288,13 +293,14 @@ class SessionManager(object):
                 session.valid_until = datetime.datetime.now() + datetime.timedelta(
                     seconds=sgs.session_keep_alive_timeout)
                 session.save()
-            if session_status == SESSION_STATUS_SCHEDULED:
+            if session_status == SESSION_STATUS_SCHEDULED or \
+               session_status == SESSION_STATUS_GETTING_HOSTNAME:
                 if session.http_host != '':
                     log.info(1, 'Rendering resource is now starting!')
                     session.status = SESSION_STATUS_STARTING
                     session.save()
                 else:
-                    status_description = str(session.renderer_id + ' is scheduled')
+                    status_description = str(session.renderer_id + ' is scheduled. Be patient...')
             elif session_status == SESSION_STATUS_STARTING:
                 # Rendering resource might be running but not yet capable of
                 # serving REST requests. The vocabulary is invoked to make
