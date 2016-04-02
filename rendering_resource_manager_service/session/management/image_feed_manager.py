@@ -112,10 +112,10 @@ class ImageFeedManager(object):
                 url=url, headers=headers, data=uri)
             log.info(1, 'Response: ' + response.text)
             response.close()
-            return [response.status_code, response]
+            return [response.status_code, response.text]
         except requests.exceptions.HTTPError as e:
             log.error(str(e))
-            return [e.code, str(e)]
+            return [400, str(e)]
         except requests.exceptions.RequestException as e:
             log.error(str(e))
-            return [e.code, str(e)]
+            return [400, str(e)]
