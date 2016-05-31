@@ -86,7 +86,7 @@ class JobManager(object):
         self._mutex.release()
         return response
 
-    def schedule(self, session, params, environment):
+    def schedule(self, session, params, environment, reservation_name):
         """
         Utility method to schedule an instance of the renderer on the cluster
         """
@@ -113,8 +113,9 @@ class JobManager(object):
             log.info(1, 'Scheduling job: ' +
                      str(rr_settings.command_line) + ' ' + str(parameters) + ', ' +
                      str(environment_variables))
-            session.job_id = self.create_job(str(rr_settings.id), str(rr_settings.command_line),
-                                             parameters, environment_variables, modules)
+            session.job_id = self.create_job(
+                str(rr_settings.id), str(rr_settings.command_line),
+                parameters, environment_variables, reservation_name, modules)
             session.status = SESSION_STATUS_SCHEDULED
             session.save()
             response = json.dumps({'message': 'Job scheduled', 'jobId': session.job_id})
@@ -126,7 +127,7 @@ class JobManager(object):
         finally:
             self._mutex.release()
 
-    def create_job(self, job_id, executable, params, environment, modules):
+    def create_job(self, job_id, executable, params, environment, reservation_name, modules):
         """
         Launch a job on the cluster with the given executable and parameters
         :return: The ID of the job
@@ -141,7 +142,10 @@ class JobManager(object):
         description.total_physical_memory = 2000
         description.arguments = params
         description.queue = settings.SLURM_QUEUE
-        description.project = global_settings.SLURM_PROJECT
+        if reservation_name == '':
+            description.project = global_settings.SLURM_PROJECT + ':' + reservation_name
+        else:
+            description.project = global_settings.SLURM_PROJECT
         description.output = settings.SLURM_OUTPUT_PREFIX + job_id + settings.SLURM_OUT_FILE
         description.error = settings.SLURM_OUTPUT_PREFIX + job_id + settings.SLURM_ERR_FILE
 
