@@ -243,8 +243,7 @@ class CommandViewSet(viewsets.ModelViewSet):
         """
         # pylint: disable=R0912
         try:
-            sm = session_manager.SessionManager()
-            session_id = sm.get_session_id_from_request(request)
+            session_id = session_manager.SessionManager().get_session_id_from_request(request)
             log.debug(1, 'Processing command <' + command + '> for session ' + str(session_id))
             session = Session.objects.get(id=session_id)
             parameters = ''
@@ -252,17 +251,26 @@ class CommandViewSet(viewsets.ModelViewSet):
                 parameters = request.DATA['params']
             except KeyError:
                 log.debug(1, 'No parameters specified')
+
             environment = ''
             try:
                 environment = request.DATA['environment']
             except KeyError:
                 log.debug(1, 'No environment specified')
+
+            reservation_name = ''
+            try:
+                reservation_name = request.DATA['reservation_name']
+            except KeyError:
+                log.debug(1, 'No reservation name specified')
+
             log.debug(1, 'Executing command <' + command + '> parameters=' + str(parameters) +
-                      ' environment=' + str(environment))
+                      ' environment=' + str(environment) +
+                      ' reservation id=' + str(reservation_name))
 
             response = None
             if command == 'schedule':
-                response = cls.__schedule_job(session, parameters, environment)
+                response = cls.__schedule_job(session, parameters, environment, reservation_name)
             elif command == 'open':
                 response = cls.__open_process(session, parameters, environment)
             elif command == 'status':
@@ -302,7 +310,7 @@ class CommandViewSet(viewsets.ModelViewSet):
             return HttpResponse(status=500, content=response)
 
     @classmethod
-    def __schedule_job(cls, session, parameters, environment):
+    def __schedule_job(cls, session, parameters, environment, reservation_name):
         """
         Starts a rendering resource by scheduling a slurm job
         :param : session: Session holding the rendering resource
@@ -311,7 +319,8 @@ class CommandViewSet(viewsets.ModelViewSet):
         """
         session.http_host = ''
         session.http_port = consts.DEFAULT_RENDERER_HTTP_PORT + random.randint(0, 1000)
-        status = job_manager.globalJobManager.schedule(session, parameters, environment)
+        status = job_manager.globalJobManager.schedule(
+            session, parameters, environment, reservation_name)
         return HttpResponse(status=status[0], content=status[1])
 
     @classmethod

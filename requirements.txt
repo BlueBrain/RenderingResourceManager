@@ -4,7 +4,6 @@ django-cors-headers==0.12
 django-filter==0.8
 djangorestframework==2.3.14
 django-rest-swagger==0.1.14
-saga-python==0.14
-radical.utils==0.7.11
+saga-python==0.40
 requests==2.9.1
 gevent==1.0.1
