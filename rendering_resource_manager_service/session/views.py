@@ -215,14 +215,12 @@ class SessionViewSet(viewsets.ModelViewSet):
         log.info(1, 'Remove image feed route if it exists')
         ifm = image_feed_manager.ImageFeedManager(session_id)
         status = ifm.remove_route()
-        message = ''
         if status[0] != 200:
-            message = status[1]
+            log.error(status[1])
         log.info(1, 'Remove session from db')
         status = sm.delete_session(session_id)
-        message = status[1] + ': ' + message
         log.info(1, 'Session deleted ' + str(session_id))
-        return HttpResponse(status=status[0], content=message)
+        return HttpResponse(status=status[0], content=status[1])
 
 
 class CommandViewSet(viewsets.ModelViewSet):
