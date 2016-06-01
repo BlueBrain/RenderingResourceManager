@@ -143,9 +143,9 @@ class JobManager(object):
         description.arguments = params
         description.queue = settings.SLURM_QUEUE
         if reservation_name == '':
-            description.project = global_settings.SLURM_PROJECT + ':' + reservation_name
-        else:
             description.project = global_settings.SLURM_PROJECT
+        else:
+            description.project = global_settings.SLURM_PROJECT + ':' + reservation_name
         description.output = settings.SLURM_OUTPUT_PREFIX + job_id + settings.SLURM_OUT_FILE
         description.error = settings.SLURM_OUTPUT_PREFIX + job_id + settings.SLURM_ERR_FILE
 
