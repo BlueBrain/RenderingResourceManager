@@ -244,33 +244,11 @@ class CommandViewSet(viewsets.ModelViewSet):
             session_id = session_manager.SessionManager().get_session_id_from_request(request)
             log.debug(1, 'Processing command <' + command + '> for session ' + str(session_id))
             session = Session.objects.get(id=session_id)
-            parameters = ''
-            try:
-                parameters = request.DATA['params']
-            except KeyError:
-                log.debug(1, 'No parameters specified')
-
-            environment = ''
-            try:
-                environment = request.DATA['environment']
-            except KeyError:
-                log.debug(1, 'No environment specified')
-
-            reservation_name = ''
-            try:
-                reservation_name = request.DATA['reservation_name']
-            except KeyError:
-                log.debug(1, 'No reservation name specified')
-
-            log.debug(1, 'Executing command <' + command + '> parameters=' + str(parameters) +
-                      ' environment=' + str(environment) +
-                      ' reservation id=' + str(reservation_name))
-
             response = None
             if command == 'schedule':
-                response = cls.__schedule_job(session, parameters, environment, reservation_name)
+                response = cls.__schedule_job(session, request)
             elif command == 'open':
-                response = cls.__open_process(session, parameters, environment)
+                response = cls.__open_process(session, request)
             elif command == 'status':
                 status = cls.__session_status(session)
                 response = HttpResponse(status=status[0], content=status[1])
@@ -308,28 +286,71 @@ class CommandViewSet(viewsets.ModelViewSet):
             return HttpResponse(status=500, content=response)
 
     @classmethod
-    def __schedule_job(cls, session, parameters, environment, reservation_name):
+    def __schedule_job(cls, session, request):
         """
         Starts a rendering resource by scheduling a slurm job
         :param : session: Session holding the rendering resource
-        :param : parameters: Parameters passed in the HTTP request
+        :param : request: HTTP request with a body containing a JSON representation of the job
+                 parameters
         :rtype : An HTTP response containing the status and description of the command
         """
+        job_information = job_manager.JobInformation()
+        try:
+            job_information.params = request.DATA['params']
+        except KeyError:
+            log.debug(1, 'No parameters specified')
+
+        try:
+            job_information.environment = request.DATA['environment']
+        except KeyError:
+            log.debug(1, 'No environment specified')
+
+        try:
+            job_information.reservation_name = request.DATA['reservation_name']
+        except KeyError:
+            log.debug(1, 'No reservation name specified')
+
+        try:
+            job_information.queue_name = request.DATA['queue_name']
+        except KeyError:
+            log.debug(1, 'No queue name specified')
+
+        try:
+            job_information.exclusive_allocation = \
+                request.DATA['exclusive_allocation']
+        except KeyError:
+            log.debug(1, 'No exclusive allocation specified')
+
         session.http_host = ''
         session.http_port = consts.DEFAULT_RENDERER_HTTP_PORT + random.randint(0, 1000)
         status = job_manager.globalJobManager.schedule(
-            session, parameters, environment, reservation_name)
+            session, job_information)
         return HttpResponse(status=status[0], content=status[1])
 
     @classmethod
-    def __open_process(cls, session, parameters, environment):
+    def __open_process(cls, session, request):
         """
         Starts a local rendering resource process
         :param : session: Session holding the rendering resource
-        :param : parameters: Parameters passed in the HTTP request
+        :param : request: HTTP request with a body containing a JSON representation of the process
+                 parameters
         :rtype : An HTTP response containing the status and description of the command
         """
-        log.info(1, 'Opening ' + session.renderer_id)
+        parameters = ''
+        try:
+            parameters = request.DATA['params']
+        except KeyError:
+            log.debug(1, 'No parameters specified')
+
+        environment = ''
+        try:
+            environment = request.DATA['environment']
+        except KeyError:
+            log.debug(1, 'No environment specified')
+
+        log.debug(1, 'Executing command <Open> parameters=' + str(parameters) +
+                  ' environment=' + str(environment))
+
         if session.process_pid == -1:
             session.http_host = consts.DEFAULT_RENDERER_HOST
             session.http_port = consts.DEFAULT_RENDERER_HTTP_PORT + random.randint(0, 1000)

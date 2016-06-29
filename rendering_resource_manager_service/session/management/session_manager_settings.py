@@ -62,7 +62,7 @@ SLURM_HOST_DOMAIN = '.cscs.ch'
 SLURM_HOST = 'bbpviz1' + SLURM_HOST_DOMAIN
 SLURM_SERVICE_URL = 'slurm+ssh://' + SLURM_HOST
 SLURM_JOB_NAME_PREFIX = 'VWS_'
-SLURM_QUEUE = 'interactive'
+SLURM_DEFAULT_QUEUE = 'interactive'
 SLURM_PROJECT = 'proj49'
 SLURM_OUTPUT_PREFIX = '/gpfs/bbp.cscs.ch/home/' + global_settings.SLURM_USERNAME +\
                       '/var/log/vws_%A_'
