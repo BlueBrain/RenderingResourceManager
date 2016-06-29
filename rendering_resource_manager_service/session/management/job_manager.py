@@ -36,15 +36,31 @@ from threading import Lock
 import json
 
 import rendering_resource_manager_service.session.management.session_manager_settings as settings
-import rendering_resource_manager_service.utils.custom_logging as log
 from rendering_resource_manager_service.config.management import \
     rendering_resource_settings_manager as manager
 import saga
 import re
+import rendering_resource_manager_service.utils.custom_logging as log
 from rendering_resource_manager_service.session.models import \
     SESSION_STATUS_STARTING, SESSION_STATUS_RUNNING, \
     SESSION_STATUS_SCHEDULING, SESSION_STATUS_SCHEDULED
 import rendering_resource_manager_service.service.settings as global_settings
+
+
+class JobInformation(object):
+    """
+    The job information class holds slurm job attributes
+    """
+
+    def __init__(self):
+        """
+        Setup saga context, session and service
+        """
+        self.params = ''
+        self.environment = ''
+        self.reservation_name = ''
+        self.queue_name = settings.SLURM_DEFAULT_QUEUE
+        self.exclusive_allocation = False
 
 
 class JobManager(object):
@@ -86,7 +102,7 @@ class JobManager(object):
         self._mutex.release()
         return response
 
-    def schedule(self, session, params, environment, reservation_name):
+    def schedule(self, session, job_information):
         """
         Utility method to schedule an instance of the renderer on the cluster
         """
@@ -106,16 +122,20 @@ class JobManager(object):
             session.status = SESSION_STATUS_SCHEDULING
             session.save()
             parameters = rest_parameters.split()
-            parameters.append(params)
+            parameters.append(job_information.params)
+            job_information.params = parameters
+
             environment_variables = rr_settings.environment_variables.split()
             modules = rr_settings.modules.split()
-            environment_variables.append(environment)
+            environment_variables.append(job_information.environment)
+            job_information.environment = environment_variables
+
             log.info(1, 'Scheduling job: ' +
                      str(rr_settings.command_line) + ' ' + str(parameters) + ', ' +
                      str(environment_variables))
             session.job_id = self.create_job(
                 str(rr_settings.id), str(rr_settings.command_line),
-                parameters, environment_variables, reservation_name, modules)
+                job_information, modules)
             session.status = SESSION_STATUS_SCHEDULED
             session.save()
             response = json.dumps({'message': 'Job scheduled', 'jobId': session.job_id})
@@ -127,7 +147,7 @@ class JobManager(object):
         finally:
             self._mutex.release()
 
-    def create_job(self, job_id, executable, params, environment, reservation_name, modules):
+    def create_job(self, job_id, executable, job_information, modules):
         """
         Launch a job on the cluster with the given executable and parameters
         :return: The ID of the job
@@ -135,23 +155,26 @@ class JobManager(object):
         log.debug(1, 'Creating job for ' + executable)
         description = saga.job.Description()
         description.name = settings.SLURM_JOB_NAME_PREFIX + job_id
-        description.executable = 'module purge\n'
+        description.executable = ''
+        if job_information.exclusive_allocation:
+            description.executable = '#SBATCH --exclusive\n'
+        description.executable += 'module purge\n'
         for module in modules:
             description.executable += 'module load ' + module.strip() + '\n'
         description.executable += executable
-        description.total_physical_memory = 2000
-        description.arguments = params
-        description.queue = settings.SLURM_QUEUE
-        if reservation_name == '':
+        description.arguments = job_information.params
+        description.queue = job_information.queue_name
+        if job_information.reservation_name == '':
             description.project = global_settings.SLURM_PROJECT
         else:
-            description.project = global_settings.SLURM_PROJECT + ':' + reservation_name
+            description.project = global_settings.SLURM_PROJECT + ':' + \
+                                  job_information.reservation_name
         description.output = settings.SLURM_OUTPUT_PREFIX + job_id + settings.SLURM_OUT_FILE
         description.error = settings.SLURM_OUTPUT_PREFIX + job_id + settings.SLURM_ERR_FILE
 
         # Add environment variables
         environment_variables = ''
-        for variable in environment:
+        for variable in job_information.environment:
             variable = variable.strip()
             if variable != '':
                 environment_variables = environment_variables + variable + ' '
