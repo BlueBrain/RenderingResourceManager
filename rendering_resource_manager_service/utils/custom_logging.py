@@ -26,12 +26,31 @@ This module provides helper functions for logging of info, debug and error infor
 """
 
 from threading import current_thread
-
 import datetime
-import logging
+from threading import Lock
+import sys
 
-L = logging.getLogger(__name__)
-logging.basicConfig(level=logging.ERROR)
+log_mutex = Lock()
+LOGGING_LEVEL = 1
+
+
+def print_message(prefix, destination, level, message):
+    """
+    This function logs a message in the system console with the following format:
+    [type][message level][timestamp][thread name][message]
+    :param destination: cerr or cout
+    :param prefix: DEBUG, INFO or ERROR
+    :param level: Message level. Only message with a level higher than LOGGING_LEVEL are processed
+    :param message: Message to be logged
+    """
+    if level <= LOGGING_LEVEL:
+        log_mutex.acquire()
+        destination.write(prefix + ' [%s] [%s] [%s] %s\n' % (
+              str(level),
+              datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S.%f'),
+              current_thread().getName(),
+              message))
+        log_mutex.release()
 
 
 def info(level, message):
@@ -41,11 +60,7 @@ def info(level, message):
     :param level: Message level. Only message with a level higher than LOGGING_LEVEL are processed
     :param message: Message to be logged
     """
-    L.info("[%s] [%s] [%s] %s",
-           str(level),
-           datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-           current_thread().getName(),
-           message)
+    print_message('[INFO ]', sys.stdout, level, message)
 
 
 def debug(level, message):
@@ -55,11 +70,7 @@ def debug(level, message):
     :param level: Message level. Only message with a level higher than LOGGING_LEVEL are processed
     :param message: Message to be logged
     """
-    L.debug("[%s] [%s] [%s] %s",
-            str(level),
-            datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            current_thread().getName(),
-            message)
+    print_message('[DEBUG]', sys.stdout, level, message)
 
 
 def error(message):
@@ -68,7 +79,4 @@ def error(message):
     ERROR [timestamp][thread name][message]
     :param message: Message to be logged
     """
-    L.error("[%s] [%s] %s",
-            datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
-            current_thread().getName(),
-            message)
+    print_message('[ERROR]', sys.stderr, 1, message)
