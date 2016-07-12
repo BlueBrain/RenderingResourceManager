@@ -43,7 +43,7 @@ settings_details = RenderingResourceSettingsDetailsViewSet.as_view({
 urlpatterns = patterns(
     '',
     url(r'/config/$', settings_list),
-    url(r'/config/(?P<id>[a-zA-Z0-9]+)/$', settings_details),
+    url(r'/config/(?P<pk>[a-zA-Z0-9_]+)', settings_details),
 )
 
 urlpatterns = format_suffix_patterns(urlpatterns)

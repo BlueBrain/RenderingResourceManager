@@ -68,15 +68,15 @@ class RenderingResourceSettingsDetailsViewSet(viewsets.ModelViewSet):
 
     @classmethod
     # pylint: disable=W0613
-    def delete(cls, request, settings_id):
+    def delete(cls, request, pk):
         """
         Removes the config for a new rendering resource
         :param request The REST request
-        :param settings_id Identifier of the Rendering resource config to remove
+        :param pk Identifier of the Rendering resource config to remove
         :rtype A Json response containing on ok status or a description of the error
         """
         manager = rendering_resource_settings_manager.RenderingResourceSettingsManager()
-        response = manager.delete(settings_id)
+        response = manager.delete(pk)
         return HttpResponse(status=response[0], content=response[1])
 
 
