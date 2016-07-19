@@ -65,7 +65,7 @@ class SessionSerializer(serializers.ModelSerializer):
         Meta class for the Session Serializer
         """
         model = Session
-        fields = ('owner', 'renderer_id')
+        fields = ('id', 'owner', 'renderer_id')
 
 
 class SessionDetailsSerializer(serializers.ModelSerializer):
@@ -84,7 +84,7 @@ class SessionDetailsSerializer(serializers.ModelSerializer):
         Meta class for the Session Serializer
         """
         model = Session
-        fields = ('owner', 'created', 'renderer_id', 'job_id', 'status',
+        fields = ('id', 'owner', 'created', 'renderer_id', 'job_id', 'status',
                   'http_host', 'http_port', 'valid_until')
 
 
@@ -296,35 +296,23 @@ class CommandViewSet(viewsets.ModelViewSet):
         """
         job_information = job_manager.JobInformation()
         try:
-            job_information.params = request.DATA['params']
+            job_information.params = str(request.DATA['params'])
         except KeyError:
             log.debug(1, 'No parameters specified')
 
         try:
-            job_information.environment = request.DATA['environment']
+            job_information.environment = str(request.DATA['environment'])
         except KeyError:
             log.debug(1, 'No environment specified')
 
         try:
-            job_information.reservation_name = request.DATA['reservation_name']
+            job_information.reservation = str(request.DATA['reservation'])
         except KeyError:
             log.debug(1, 'No reservation name specified')
 
-        try:
-            job_information.queue_name = request.DATA['queue_name']
-        except KeyError:
-            log.debug(1, 'No queue name specified')
-
-        try:
-            job_information.exclusive_allocation = \
-                request.DATA['exclusive_allocation']
-        except KeyError:
-            log.debug(1, 'No exclusive allocation specified')
-
         session.http_host = ''
         session.http_port = consts.DEFAULT_RENDERER_HTTP_PORT + random.randint(0, 1000)
-        status = job_manager.globalJobManager.schedule(
-            session, job_information)
+        status = job_manager.globalJobManager.schedule(session, job_information)
         return HttpResponse(status=status[0], content=status[1])
 
     @classmethod
@@ -377,7 +365,7 @@ class CommandViewSet(viewsets.ModelViewSet):
             session.status = SESSION_STATUS_GETTING_HOSTNAME
             session.save()
             log.info(1, 'Querying JOB hostname for job id: ' + str(session.job_id))
-            hostname = job_manager.JobManager.hostname(session.job_id)
+            hostname = job_manager.globalJobManager.hostname(session.job_id)
             if hostname == '':
                 msg = 'Job scheduled but ' + session.renderer_id + ' is not yet running'
                 log.error(msg)

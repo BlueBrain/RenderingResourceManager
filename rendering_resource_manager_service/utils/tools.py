@@ -44,12 +44,3 @@ def get_request_headers(request):
                     if k.startswith("HTTP_")])
     headers["Cookie"] = "; ".join([k + "=" + v for k, v in request.COOKIES.items()])
     return headers
-
-
-def str2bool(value):
-    """
-    Converts a string to a boolean
-    :param value: String containing a boolean value
-    :return: True is string is 'yes', 'true', 'on' or '1'. False otherwise
-    """
-    return value.lower() in ('yes', 'true', 'on', '1')

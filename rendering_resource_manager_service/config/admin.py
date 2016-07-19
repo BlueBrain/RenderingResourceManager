@@ -37,6 +37,7 @@ class RenderingResourceSettingsAdmin(admin.ModelAdmin):
     """
     fields = ['id', 'command_line', 'environment_variables', 'modules',
               'process_rest_parameters_format', 'scheduler_rest_parameters_format',
+              'project', 'queue', 'exclusive', 'nb_nodes', 'nb_cpus', 'nb_gpus',
               'graceful_exit', 'wait_until_running']
 
 try:

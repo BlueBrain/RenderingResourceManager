@@ -31,7 +31,6 @@ and ensures persistent storage in a database
 
 from rendering_resource_manager_service.config.models import RenderingResourceSettings
 import rendering_resource_manager_service.utils.custom_logging as log
-from rendering_resource_manager_service.utils.tools import str2bool
 from django.db import IntegrityError, transaction
 from rest_framework.renderers import JSONRenderer
 
@@ -56,8 +55,14 @@ class RenderingResourceSettingsManager(object):
                 modules=str(params['modules']),
                 process_rest_parameters_format=str(params['process_rest_parameters_format']),
                 scheduler_rest_parameters_format=str(params['scheduler_rest_parameters_format']),
-                graceful_exit=str2bool(params['graceful_exit']),
-                wait_until_running=str2bool(params['wait_until_running']))
+                project=str(params['project']),
+                queue=str(params['queue']),
+                exclusive=params['exclusive'],
+                nb_nodes=params['nb_nodes'],
+                nb_cpus=params['nb_cpus'],
+                nb_gpus=params['nb_gpus'],
+                graceful_exit=params['graceful_exit'],
+                wait_until_running=params['wait_until_running'])
             with transaction.atomic():
                 settings.save(force_insert=True)
             msg = 'Rendering Resource ' + settings_id + ' successfully configured'
@@ -74,17 +79,21 @@ class RenderingResourceSettingsManager(object):
         :param params new config for the rendering resource
         """
         try:
-            settings_id = str(params['id'])
+            settings_id = params['id']
             settings = RenderingResourceSettings.objects.get(id=settings_id)
-            settings.command_line = str(params['command_line'])
-            settings.environment_variables = str(params['environment_variables'])
-            settings.modules = str(params['modules'])
-            settings.process_rest_parameters_format = \
-                str(params['process_rest_parameters_format'])
-            settings.scheduler_rest_parameters_format = \
-                str(params['scheduler_rest_parameters_format'])
-            settings.graceful_exit = str2bool(params['graceful_exit'])
-            settings.wait_until_running = str2bool(params['wait_until_running'])
+            settings.command_line = params['command_line']
+            settings.environment_variables = params['environment_variables']
+            settings.modules = params['modules']
+            settings.process_rest_parameters_format = params['process_rest_parameters_format']
+            settings.scheduler_rest_parameters_format = params['scheduler_rest_parameters_format']
+            settings.project = params['project']
+            settings.queue = params['queue']
+            settings.exclusive = params['exclusive']
+            settings.nb_nodes = params['nb_nodes']
+            settings.nb_cpus = params['nb_cpus']
+            settings.nb_gpus = params['nb_gpus']
+            settings.graceful_exit = params['graceful_exit']
+            settings.wait_until_running = params['wait_until_running']
             with transaction.atomic():
                 settings.save()
             return [200, '']
