@@ -57,8 +57,14 @@ class TestSessionManager(TestCase):
         params['modules'] = 'BBP/viz/latest'
         params['process_rest_parameters_format'] = '--rest {$rest_hostname}:${rest_port}'
         params['scheduler_rest_parameters_format'] = '--rest $SLURMD_NODENAME:${rest_port}'
-        params['graceful_exit'] = 'True'
-        params['wait_until_running'] = 'True'
+        params['project'] = 'project'
+        params['queue'] = 'test'
+        params['exclusive'] = False
+        params['nb_nodes'] = 1
+        params['nb_cpus'] = 1
+        params['nb_gpus'] = 1
+        params['graceful_exit'] = True
+        params['wait_until_running'] = True
         status = manager.create(params)
         nt.assert_true(status[0] == 201)
         # Delete Settings
@@ -76,8 +82,14 @@ class TestSessionManager(TestCase):
         params['modules'] = 'BBP/viz/latest'
         params['process_rest_parameters_format'] = '--rest {$rest_hostname}:${rest_port}'
         params['scheduler_rest_parameters_format'] = '--rest $SLURMD_NODENAME:${rest_port}'
-        params['graceful_exit'] = 'True'
-        params['wait_until_running'] = 'True'
+        params['project'] = 'project'
+        params['queue'] = 'test'
+        params['exclusive'] = False
+        params['nb_nodes'] = 1
+        params['nb_cpus'] = 1
+        params['nb_gpus'] = 1
+        params['graceful_exit'] = True
+        params['wait_until_running'] = True
         status = manager.create(params)
         nt.assert_true(status[0] == 201)
         # Duplicate
@@ -107,8 +119,14 @@ class TestSessionManager(TestCase):
         params['modules'] = 'BBP/viz/latest'
         params['process_rest_parameters_format'] = '--rest {$rest_hostname}:${rest_port}'
         params['scheduler_rest_parameters_format'] = '--rest $SLURMD_NODENAME:${rest_port}'
-        params['graceful_exit'] = 'True'
-        params['wait_until_running'] = 'True'
+        params['project'] = 'project'
+        params['queue'] = 'test'
+        params['exclusive'] = False
+        params['nb_nodes'] = 1
+        params['nb_cpus'] = 1
+        params['nb_gpus'] = 1
+        params['graceful_exit'] = True
+        params['wait_until_running'] = True
         status = manager.create(params)
         nt.assert_true(status[0] == 201)
 
@@ -121,8 +139,14 @@ class TestSessionManager(TestCase):
             '--rest {$rest_hostname}:${rest_port}:${rest_schema}'
         params['scheduler_rest_parameters_format'] = \
             '--rest $SLURMD_NODENAME:${rest_port}:${rest_schema}'
-        params['graceful_exit'] = 'True'
-        params['wait_until_running'] = 'True'
+        params['project'] = 'project'
+        params['queue'] = 'test'
+        params['exclusive'] = False
+        params['nb_nodes'] = 1
+        params['nb_cpus'] = 1
+        params['nb_gpus'] = 1
+        params['graceful_exit'] = True
+        params['wait_until_running'] = True
         status = manager.create(params)
         nt.assert_true(status[0] == 201)
         status = manager.list(RenderingResourceSettingsSerializer)
@@ -139,6 +163,12 @@ class TestSessionManager(TestCase):
                     '"--rest {$rest_hostname}:${rest_port}:${rest_schema}", ' \
                     '"scheduler_rest_parameters_format": ' \
                     '"--rest $SLURMD_NODENAME:${rest_port}:${rest_schema}", ' \
+                    '"project": "project", ' \
+                    '"queue": "test", ' \
+                    '"exclusive": false, ' \
+                    '"nb_nodes": 1, ' \
+                    '"nb_cpus": 1, ' \
+                    '"nb_gpus": 1, ' \
                     '"graceful_exit": true, ' \
                     '"wait_until_running": true}, ' \
                     '{"id": "rtneuron", ' \
@@ -150,6 +180,12 @@ class TestSessionManager(TestCase):
                     '"--rest {$rest_hostname}:${rest_port}", ' \
                     '"scheduler_rest_parameters_format": ' \
                     '"--rest $SLURMD_NODENAME:${rest_port}", ' \
+                    '"project": "project", ' \
+                    '"queue": "test", ' \
+                    '"exclusive": false, ' \
+                    '"nb_nodes": 1, ' \
+                    '"nb_cpus": 1, ' \
+                    '"nb_gpus": 1, ' \
                     '"graceful_exit": true, ' \
                     '"wait_until_running": true}' \
                     ']'
@@ -166,8 +202,14 @@ class TestSessionManager(TestCase):
         params['modules'] = 'BBP/viz/latest'
         params['process_rest_parameters_format'] = '--rest {$rest_hostname}:${rest_port}'
         params['scheduler_rest_parameters_format'] = '--rest $SLURMD_NODENAME:${rest_port}'
-        params['graceful_exit'] = 'True'
-        params['wait_until_running'] = 'True'
+        params['project'] = 'project'
+        params['queue'] = 'test'
+        params['exclusive'] = False
+        params['nb_nodes'] = 1
+        params['nb_cpus'] = 1
+        params['nb_gpus'] = 1
+        params['graceful_exit'] = True
+        params['wait_until_running'] = True
         status = manager.create(params)
         nt.assert_true(status[0] == 201)
 

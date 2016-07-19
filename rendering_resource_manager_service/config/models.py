@@ -39,6 +39,12 @@ class RenderingResourceSettings(models.Model):
     modules = models.CharField(max_length=4096, default='')
     process_rest_parameters_format = models.CharField(max_length=1024, default='')
     scheduler_rest_parameters_format = models.CharField(max_length=1024, default='')
+    project = models.CharField(max_length=256)
+    queue = models.CharField(max_length=256)
+    exclusive = models.BooleanField(default=False)
+    nb_nodes = models.IntegerField(default=0)
+    nb_cpus = models.IntegerField(default=1)
+    nb_gpus = models.IntegerField(default=1)
     graceful_exit = models.BooleanField(default=True)
     wait_until_running = models.BooleanField(default=True)
 
@@ -52,6 +58,8 @@ class RenderingResourceSettings(models.Model):
             'modules',
             'process_rest_parameters_format',
             'scheduler_rest_parameters_format',
+            'project', 'queue', 'exclusive',
+            'nb_nodes', 'nb_cpus', 'nb_gpus',
             'graceful_exit', 'wait_until_running')
 
     def __str__(self):

@@ -51,24 +51,12 @@ REQUEST_ARGUMENT_COMMAND = "command"
 REQUEST_ARGUMENT_RENDERER = "renderer"
 REQUEST_ARGUMENT_PARAMS = "parameters"
 
-# Renderers
-RENDERER_ID_UNDEFINED = 0
-RENDERER_ID_LIVRE = 1
-RENDERER_ID_RTNEURON = 2
-RENDERER_ID_PARAVIEW = 3
-
 # SLURM
-SLURM_HOST_DOMAIN = '.cscs.ch'
-SLURM_HOST = 'bbpviz1' + SLURM_HOST_DOMAIN
-SLURM_SERVICE_URL = 'slurm+ssh://' + SLURM_HOST
-SLURM_JOB_NAME_PREFIX = 'VWS_'
-SLURM_DEFAULT_QUEUE = 'interactive'
-SLURM_PROJECT = 'proj49'
 SLURM_OUTPUT_PREFIX = '/gpfs/bbp.cscs.ch/home/' + global_settings.SLURM_USERNAME +\
-                      '/var/log/vws_%A_'
-SLURM_ERR_FILE = '_err.txt'
-SLURM_OUT_FILE = '_out.txt'
-SLURM_DEFAULT_MODULE = 'BBP/viz/latest'
+                      '/var/log/vws'
+SLURM_ERR_FILE = 'err.log'
+SLURM_OUT_FILE = 'out.log'
+SLURM_ALLOCATION_TIMEOUT = 20
 
 # Session management
 RRM_SPECIFIC_COMMAND_KEEPALIVE = 'keepalive'
@@ -76,4 +64,5 @@ RRM_SPECIFIC_COMMAND_RESUME = 'resume'
 RRM_SPECIFIC_COMMAND_SUSPEND = 'suspend'
 
 # Rendering resource commands
-RR_SPECIFIC_COMMAND_VOCABULARY = 'zerobuf/render/camera'
+RR_SPECIFIC_COMMAND_VOCABULARY = 'zerobuf/render/fovcamera'
+RR_SPECIFIC_COMMAND_EXIT = 'zerobuf/render/exit'

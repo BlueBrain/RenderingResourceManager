@@ -33,7 +33,7 @@ DATABASES = {
 }
 
 SLURM_USERNAME = '<%= @user %>'
-SLURM_KEY = '<%= @home %>/.ssh/id_rsa'
+SLURM_SSH_KEY = '<%= @home %>/.ssh/id_rsa'
 SLURM_PROJECT = '<%= @slurm_project %>'
 SOCIAL_AUTH_HBP_KEY = '<%= @client_id %>'
 IMAGE_STREAMING_SERVICE_URL = 'http://<%= @fqdn %>/<%= @front_prefix %>/<%= @hiss_service_name %>'

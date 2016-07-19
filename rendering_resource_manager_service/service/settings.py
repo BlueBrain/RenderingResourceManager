@@ -171,16 +171,20 @@ BASE_URL_PREFIX = r'^' + APPLICATION_NAME + '/' + API_VERSION
 sys.path.append(BASE_DIR)
 sys.path.append(BASE_DIR + '/rendering_resource_manager_service')
 
-# Slurm credentials (To be modified by deployment process)
+# Slurm (To be modified by deployment process)
 SLURM_USERNAME = 'TO_BE_MODIFIED'
-SLURM_KEY = 'TO_BE_MODIFIED'
+SLURM_SSH_KEY = 'TO_BE_MODIFIED'
 SLURM_PROJECT = 'TO_BE_MODIFIED'
+SLURM_HOST_DOMAIN = 'TO_BE_MODIFIED'
+SLURM_HOST = 'TO_BE_MODIFIED' + SLURM_HOST_DOMAIN
+SLURM_DEFAULT_QUEUE = 'TO_BE_MODIFIED'
 
 # ClientID needed by the HBP collab project browser
 SOCIAL_AUTH_HBP_KEY = 'TO_BE_MODIFIED'
 
 # Image Streaming Service URL
 IMAGE_STREAMING_SERVICE_URL = 'TO_BE_MODIFIED'
+REQUEST_TIMEOUT = 5
 
 try:
     from local_settings import * # pylint: disable=F0401,W0403,W0401,W0614

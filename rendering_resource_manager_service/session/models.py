@@ -59,7 +59,7 @@ class Session(models.Model):
         """
         A Meta object for the Session
         """
-        ordering = ('created',)
+        ordering = ('id', 'created',)
 
     def __str__(self):
         return '%s, %s' % (self.owner, self.renderer_id)

@@ -28,23 +28,27 @@
 The job manager is in charge of managing slurm jobs.
 """
 
-import signal
 import subprocess
-import urllib2
+import requests
 import traceback
 from threading import Lock
 import json
+import re
 
 import rendering_resource_manager_service.session.management.session_manager_settings as settings
 from rendering_resource_manager_service.config.management import \
     rendering_resource_settings_manager as manager
-import saga
-import re
 import rendering_resource_manager_service.utils.custom_logging as log
 from rendering_resource_manager_service.session.models import \
     SESSION_STATUS_STARTING, SESSION_STATUS_RUNNING, \
     SESSION_STATUS_SCHEDULING, SESSION_STATUS_SCHEDULED
 import rendering_resource_manager_service.service.settings as global_settings
+
+
+SLURM_SSH_COMMAND = '/usr/bin/ssh -i ' + \
+                  global_settings.SLURM_SSH_KEY + ' ' + \
+                  global_settings.SLURM_USERNAME + '@' + \
+                  global_settings.SLURM_HOST + ' '
 
 
 class JobInformation(object):
@@ -54,370 +58,350 @@ class JobInformation(object):
 
     def __init__(self):
         """
-        Setup saga context, session and service
+        Initialization
         """
+        self.name = ''
         self.params = ''
         self.environment = ''
-        self.reservation_name = ''
-        self.queue_name = settings.SLURM_DEFAULT_QUEUE
+        self.reservation = ''
+        self.project = ''
         self.exclusive_allocation = False
 
 
 class JobManager(object):
     """
-    The job manager class provides methods for managing slurm jobs via saga.
+    The job manager class provides methods for managing slurm jobs
     """
 
     def __init__(self):
         """
-        Setup saga context, session and service
+        Setup job manager
         """
-        self._context = None
-        self._session = None
-        self._service = None
-        self._connected = False
         self._mutex = Lock()
-
-    def __connect(self):
-        """
-        Utility method to connect to slurm queue, if not already done
-        """
-        response = [200, 'Connected']
-        self._mutex.acquire()
-        if not self._connected:
-            try:
-                self._context = saga.Context('SSH')
-                self._context.user_id = global_settings.SLURM_USERNAME
-                self._context.user_key = global_settings.SLURM_KEY
-                self._session = saga.Session()
-                self._session.add_context(self._context)
-
-                url = settings.SLURM_SERVICE_URL
-                self._service = saga.job.Service(rm=url, session=self._session)
-                log.info(1, 'Connected to slurm queue ' + str(self._service.get_url()))
-                self._connected = True
-            except saga.SagaException as e:
-                log.error(str(e))
-                response = [400, str(e)]
-        self._mutex.release()
-        return response
 
     def schedule(self, session, job_information):
         """
-        Utility method to schedule an instance of the renderer on the cluster
+        Allocates a job and starts the rendering resource process. If successful, the session
+        job_id is populated and the session status is set to SESSION_STATUS_STARTING
+        :param session: Session for which the Slurm job is to be scheduled
+        :param job_information: Information about the job
+        :return: A Json response containing on ok status or a description of the error
         """
-        status = self.__connect()
-        if status[0] != 200:
-            return status
+        status = self.allocate(session, job_information)
+        if status[0] == 200:
+            session.http_host = self.hostname(session.job_id)
+            status = self.start(session, job_information)
+        return status
+
+    def allocate(self, session, job_information):
+        """
+        Allocates a job according to rendering resource configuration. If the allocation is
+        successful, the session job_id is populated and the session status is set to
+        SESSION_STATUS_SCHEDULED
+        :param session: Session for which the Slurm job is to be allocated
+        :param job_information: Information about the job
+        :return: A Json response containing on ok status or a description of the error
+        """
         try:
             self._mutex.acquire()
+            session.status = SESSION_STATUS_SCHEDULING
+            session.save()
+
             rr_settings = \
                 manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
+
+            options = ''
+            if rr_settings.exclusive:
+                options += ' --exclusive'
+            if rr_settings.nb_nodes != 0:
+                options += ' -N ' + str(rr_settings.nb_nodes)
+            else:
+                options += ' -c ' + str(rr_settings.nb_cpus)
+                options += ' --gres=gpu:' + str(rr_settings.nb_gpus)
+
+            if job_information.reservation != '':
+                options += ' --reservation=' + job_information.reservation
+
+            log.info(1, 'Scheduling job for session ' + session.id)
+
+            job_name = session.owner + '_' + rr_settings.id
+            command_line = SLURM_SSH_COMMAND + \
+                'salloc --no-shell' + \
+                ' --immediate=' + str(settings.SLURM_ALLOCATION_TIMEOUT) + \
+                ' -p ' + rr_settings.queue + \
+                ' --account=' + rr_settings.project + \
+                ' --job-name=' + job_name + \
+                options
+            log.info(1, command_line)
+            process = subprocess.Popen(
+                [command_line],
+                shell=True,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+
+            error = process.communicate()[1]
+            if len(re.findall('Granted', error)) != 0:
+                session.job_id = re.findall('\\d+', error)[0]
+                log.info(1, 'Allocated job ' + str(session.job_id))
+            else:
+                log.error(error)
+                response = json.dumps({'contents': error})
+                return [400, response]
+            process.stdin.close()
+            session.status = SESSION_STATUS_SCHEDULED
+            session.save()
+            response = json.dumps({'message': 'Job scheduled', 'jobId': session.job_id})
+            return [200, response]
+        except OSError as e:
+            log.error(str(e))
+            response = json.dumps({'contents': str(e)})
+            return [400, response]
+        finally:
+            if self._mutex.locked():
+                self._mutex.release()
+
+    def start(self, session, job_information):
+        """
+        Start the rendering resource using the job allocated by the schedule method. If successful,
+        the session status is set to SESSION_STATUS_STARTING
+        :param session: Session for which the rendering resource is started
+        :param job_information: Information about the job
+        :return: A Json response containing on ok status or a description of the error
+        """
+        try:
+            self._mutex.acquire()
+            session.status = SESSION_STATUS_STARTING
+            session.save()
+
+            rr_settings = \
+                manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
+
+            # Modules
+            full_command = 'module purge\n'
+            values = rr_settings.modules.split()
+            for module in values:
+                full_command += 'module load ' + module.strip() + '\n'
+
+            # Environment variables
+            values = rr_settings.environment_variables.split()
+            values += job_information.environment.split()
+            for variable in values:
+                full_command += variable + ' '
+
+            # Command lines parameters
             rest_parameters = manager.RenderingResourceSettingsManager.format_rest_parameters(
                 str(rr_settings.scheduler_rest_parameters_format),
                 str(session.http_host),
                 str(session.http_port),
                 'rest' + str(rr_settings.id + session.id))
+            values = rest_parameters.split()
+            values += job_information.params.split()
+            full_command += rr_settings.command_line
+            for parameter in values:
+                full_command += ' ' + parameter
 
-            session.status = SESSION_STATUS_SCHEDULING
+            # Output redirection
+            full_command += ' > ' + self._file_name(session, settings.SLURM_OUT_FILE)
+            full_command += ' 2> ' + self._file_name(session, settings.SLURM_ERR_FILE)
+            full_command += ' &\n'
+
+            # Start Process on cluster
+            command_line = '/usr/bin/ssh -i ' + \
+                           global_settings.SLURM_SSH_KEY + ' ' + \
+                           global_settings.SLURM_USERNAME + '@' + \
+                           session.http_host + global_settings.SLURM_HOST_DOMAIN
+
+            log.info(1, 'Connect to cluster machine: ' + command_line)
+            process = subprocess.Popen(
+                [command_line],
+                shell=True,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE)
+
+            log.info(1, 'Full command:\n' + full_command)
+            process.stdin.write(full_command)
+            output = process.communicate()[0]
+            log.info(1, output)
+            process.stdin.close()
+
+            session.status = SESSION_STATUS_STARTING
             session.save()
-            parameters = rest_parameters.split()
-            parameters.append(job_information.params)
-            job_information.params = parameters
-
-            environment_variables = rr_settings.environment_variables.split()
-            modules = rr_settings.modules.split()
-            environment_variables.append(job_information.environment)
-            job_information.environment = environment_variables
-
-            log.info(1, 'Scheduling job: ' +
-                     str(rr_settings.command_line) + ' ' + str(parameters) + ', ' +
-                     str(environment_variables))
-            session.job_id = self.create_job(
-                str(rr_settings.id), str(rr_settings.command_line),
-                job_information, modules)
-            session.status = SESSION_STATUS_SCHEDULED
-            session.save()
-            response = json.dumps({'message': 'Job scheduled', 'jobId': session.job_id})
+            response = json.dumps({'message': session.renderer_id + ' successfully started'})
             return [200, response]
-        except saga.SagaException as e:
+        except OSError as e:
             log.error(str(e))
             response = json.dumps({'contents': str(e)})
             return [400, response]
         finally:
-            self._mutex.release()
-
-    def create_job(self, job_id, executable, job_information, modules):
-        """
-        Launch a job on the cluster with the given executable and parameters
-        :return: The ID of the job
-        """
-        log.debug(1, 'Creating job for ' + executable)
-        description = saga.job.Description()
-        description.name = settings.SLURM_JOB_NAME_PREFIX + job_id
-        description.executable = ''
-        if job_information.exclusive_allocation:
-            description.executable = '#SBATCH --exclusive\n'
-        description.executable += 'module purge\n'
-        for module in modules:
-            description.executable += 'module load ' + module.strip() + '\n'
-        description.executable += executable
-        description.arguments = job_information.params
-        description.queue = job_information.queue_name
-        if job_information.reservation_name == '':
-            description.project = global_settings.SLURM_PROJECT
-        else:
-            description.project = global_settings.SLURM_PROJECT + ':' + \
-                                  job_information.reservation_name
-        description.output = settings.SLURM_OUTPUT_PREFIX + job_id + settings.SLURM_OUT_FILE
-        description.error = settings.SLURM_OUTPUT_PREFIX + job_id + settings.SLURM_ERR_FILE
-
-        # Add environment variables
-        environment_variables = ''
-        for variable in job_information.environment:
-            variable = variable.strip()
-            if variable != '':
-                environment_variables = environment_variables + variable + ' '
-        if environment_variables != '':
-            description.environment = environment_variables
-
-        # Create job
-        log.info(1, 'About to submit job for ' + executable)
-        job = self._service.create_job(description)
-        job.run()
-        log.info(1, 'Submitted job for ' + executable + ', got id ' +
-                 str(job.get_id()) + ', state ' + str(job.get_state()))
-        return job.get_id()
-
-    def query(self, job_id):
-        """
-        Verifies that a given job is up and running
-        :param job_id: The ID of the job
-        :return: A Json response containing on ok status or a description of the error
-        """
-        status = self.__connect()
-        if status[0] != 200:
-            return status
-        if job_id is not None:
-            try:
-                self._mutex.acquire()
-                job = self._service.get_job(job_id)
-                response = json.dumps({'contents': str(job.get_state())})
-                return [200, response]
-            except saga.SagaException as e:
-                log.error(str(e))
-                response = json.dumps({'contents': str(e.message)})
-                return [400, response]
-            finally:
+            if self._mutex.locked():
                 self._mutex.release()
 
-        return [400, 'Invalid job_id ' + str(job_id)]
-
-    # subprocess.check_output is backported from python 2.7
-    @staticmethod
-    def check_output(*popenargs, **kwargs):
-        """Run command with arguments and return its output as a byte string.
-        Backported from Python 2.7 as it's implemented as pure python on stdlib.
-        >>> check_output(['/usr/bin/python', '--version'])
-        Python 2.6.2
-
-        https://gist.github.com/edufelipe/1027906
-        """
-        process = subprocess.Popen(
-            stdin=subprocess.PIPE, stdout=subprocess.PIPE, *popenargs, **kwargs)
-        output, unused_err = process.communicate()
-        if not unused_err is None:
-            log.error(str(unused_err))
-        retcode = process.poll()
-        if retcode:
-            cmd = kwargs.get("args")
-            if cmd is None:
-                cmd = popenargs[0]
-            error = subprocess.CalledProcessError(retcode, cmd)
-            error.output = output
-            raise error
-        return output
-
-    @staticmethod
-    def hostname(job_id):
-        """
-        Retrieve the hostname for the batch host of the given job.
-        Note: this uses ssh and scontrol on the SLURM_HOST as saga does not support this feature,
-              especially if the job is not persisted. Retrieving the job from the saga service by
-              the job_id only sets the state in the job, nothing else.
-        :param job_id: The ID of the job
-        :return: The hostname of the batch host if the job is running, empty otherwise
-        """
-        job_id_as_int = re.search(r'(?=)-\[(\w+)\]', job_id).group(1)
-        log.info(1, 'Job id as int: ' + str(job_id_as_int))
-        result = JobManager.check_output(['ssh', '-i', global_settings.SLURM_KEY,
-                                          global_settings.SLURM_USERNAME + '@' +
-                                          settings.SLURM_HOST, 'scontrol show job', job_id_as_int])
-        log.info(1, str(result))
-        state = re.search(r'JobState=(\w+)', result).group(1)
-        if state == 'FAILED':
-            # Job does not exist
-            return state
-        if state != 'RUNNING':
-            # Job is scheduled but not running
-            return ''
-        hostname = re.search(r'BatchHost=(\w+)', result).group(1)
-        log.info(1, 'Hostname = ' + hostname)
-        if hostname.find(settings.SLURM_HOST_DOMAIN) == -1:
-            hostname += settings.SLURM_HOST_DOMAIN
-        return hostname
-
-    # Stop Process
     def stop(self, session):
         """
         Gently stops a given job, waits for 2 seconds and checks for its disappearance
-        :param job_id: The ID of the job
+        :param session: Session for which the rendering resource is stopped
         :return: A Json response containing on ok status or a description of the error
         """
-        status = self.__connect()
-        if status[0] != 200:
-            return status
-        if session.job_id is not None:
-            try:
-                self._mutex.acquire()
-                log.info(1, 'Stopping job <' + str(session.job_id) + '>')
-                job = self._service.get_job(session.job_id)
-                wait_timeout = 2.0
-                # pylint: disable=E1101
-                setting = \
-                    manager.RenderingResourceSettings.objects.get(
-                        id=session.renderer_id)
-                if setting.graceful_exit:
-                    try:
-                        url = "http://" + session.http_host + ":" + \
-                              str(session.http_port) + "/" + "EXIT"
-                        req = urllib2.Request(url=url)
-                        urllib2.urlopen(req).read()
-                    # pylint: disable=W0702
-                    except urllib2.HTTPError as e:
-                        msg = str(traceback.format_exc(e))
-                        log.debug(1, msg)
-                        log.error('Failed to contact rendering resource')
-                    except urllib2.URLError as e:
-                        msg = str(traceback.format_exc(e))
-                        log.debug(1, msg)
-                        log.error('Failed to contact rendering resource')
-
-                job.cancel(wait_timeout)
-                if job.get_state() == saga.job.CANCELED:
-                    msg = 'Job successfully cancelled'
-                    log.info(1, msg)
-                    response = json.dumps({'contents': msg})
-                    result = [200, response]
-                else:
-                    msg = 'Could not cancel job ' + str(session.job_id)
-                    log.info(1, msg)
-                    response = json.dumps({'contents': msg})
-                    result = [400, response]
-            except saga.NoSuccess as e:
-                msg = str(traceback.format_exc(e))
-                log.error(msg)
-                response = json.dumps({'contents': msg})
-                result = [400, response]
-            except saga.DoesNotExist as e:
-                msg = str(traceback.format_exc(e))
-                log.info(1, msg)
-                response = json.dumps({'contents': msg})
-                result = [400, response]
-            finally:
+        result = [500, 'Unexpected error']
+        try:
+            self._mutex.acquire()
+            # pylint: disable=E1101
+            setting = \
+                manager.RenderingResourceSettings.objects.get(
+                    id=session.renderer_id)
+            if setting.graceful_exit:
+                log.info(1, 'Gracefully exiting rendering resource')
+                try:
+                    url = 'http://' + session.http_host + global_settings.SLURM_HOST_DOMAIN + \
+                          ':' + str(session.http_port) + '/' + \
+                          settings.RR_SPECIFIC_COMMAND_EXIT
+                    log.info(1, url)
+                    r = requests.put(
+                        url=url,
+                        timeout=global_settings.REQUEST_TIMEOUT)
+                    r.close()
+                # pylint: disable=W0702
+                except requests.exceptions.RequestException as e:
+                    log.error(traceback.format_exc(e))
+            result = self.kill(session.job_id)
+        except OSError as e:
+            msg = str(e)
+            log.error(msg)
+            response = json.dumps({'contents': msg})
+            result = [400, response]
+        finally:
+            if self._mutex.locked():
                 self._mutex.release()
-        else:
-            log.debug(1, 'No job to stop')
-
         return result
 
-    # Kill Process
-    def kill(self, job_id):
+    @staticmethod
+    def kill(job_id):
         """
         Kills the given job. This method should only be used if the stop method failed.
         :param job_id: The ID of the job
         :return: A Json response containing on ok status or a description of the error
         """
-        if not self.__connect():
-            return
+        result = [500, 'Unexpected error']
         if job_id is not None:
             try:
-                self._mutex.acquire()
-                job = self._service.get_job(job_id)
-                job.signal(signal.SIGKILL)
-                if job.get_state() != saga.job.RUNNING:
-                    response = json.dumps({'contents': 'Job successfully killed'})
-                    return [200, response]
-            except saga.SagaException as e:
+                command_line = SLURM_SSH_COMMAND + 'scancel ' + job_id
+                log.info(1, 'Stopping job ' + job_id)
+                process = subprocess.Popen(
+                    [command_line],
+                    shell=True,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE)
+                output = process.communicate()[0]
+                log.info(1, output)
+                msg = 'Job successfully cancelled'
+                log.info(1, msg)
+                response = json.dumps({'contents': msg})
+                result = [200, response]
+            except OSError as e:
                 msg = str(e)
                 log.error(msg)
                 response = json.dumps({'contents': msg})
-                return [400, response]
-            finally:
-                self._mutex.release()
-        msg = 'Could not kill job ' + str(job_id)
-        log.error(msg)
-        response = json.dumps({'contents': msg})
-        return [400, response]
+                result = [400, response]
+        return result
 
-    @staticmethod
-    def job_information(session):
+    def hostname(self, job_id):
+        """
+        Retrieve the hostname for the host of the given job is allocated.
+        Note: this uses ssh and scontrol on the SLURM_HOST
+        :param job_id: The ID of the job
+        :return: The hostname of the host if the job is running, empty otherwise
+        """
+        return self._query(job_id, 'BatchHost')
+
+    def job_information(self, job_id):
         """
         Returns information about the job
-        :param session: the session to be queried
-        :return: A string containing the information about the job
+        :param job_id: The ID of the job
+        :return: A string containing the status of the job
         """
-        try:
-            job_id_as_int = re.search(r'(?=)-\[(\w+)\]', session.job_id).group(1)
-            result = JobManager.check_output(['ssh', '-i', global_settings.SLURM_KEY,
-                                              global_settings.SLURM_USERNAME + '@' +
-                                              settings.SLURM_HOST, 'scontrol show job',
-                                              job_id_as_int])
-            return result
-        except IOError as e:
-            return str(e)
+        return self._query(job_id, 'JobStatus')
 
-    @staticmethod
-    def rendering_resource_log(session, filename):
-        """
-        Returns the contents of the specified file
-        :param session: the session to be queried
-        :return: A string containing the error log
-        """
-        try:
-            result = 'Not available'
-            if session.status in [SESSION_STATUS_STARTING, SESSION_STATUS_RUNNING]:
-                job_id_as_int = re.search(r'(?=)-\[(\w+)\]', session.job_id).group(1)
-                rr_settings = \
-                    manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
-                filename = settings.SLURM_OUTPUT_PREFIX + \
-                           str(rr_settings.id) + filename
-                filename = filename.replace('%A', str(job_id_as_int), 1)
-                result = filename + ':\n'
-                result += JobManager.check_output(['ssh', '-i', global_settings.SLURM_KEY,
-                                                   global_settings.SLURM_USERNAME + '@' +
-                                                   settings.SLURM_HOST, 'cat ', filename])
-            return result
-        except IOError as e:
-            return str(e)
-
-    @staticmethod
-    def rendering_resource_out_log(session):
+    def rendering_resource_out_log(self, session):
         """
         Returns the contents of the rendering resource output file
-        :param session: the session to be queried
-        :return: A string containing the error log
+        :param session: The session to be queried
+        :return: A string containing the output log
         """
-        return globalJobManager.rendering_resource_log(session, settings.SLURM_OUT_FILE)
+        return self._rendering_resource_log(session, settings.SLURM_OUT_FILE)
 
-    @staticmethod
-    def rendering_resource_err_log(session):
+    def rendering_resource_err_log(self, session):
         """
         Returns the contents of the rendering resource error file
-        :param session: the session to be queried
+        :param session: The session to be queried
         :return: A string containing the error log
         """
-        return globalJobManager.rendering_resource_log(session, settings.SLURM_ERR_FILE)
+        return self._rendering_resource_log(session, settings.SLURM_ERR_FILE)
+
+    @staticmethod
+    def _query(job_id, attribute):
+        """
+        Verifies that a given job is up and running
+        :param job_id: The ID of the job
+        :return: A Json response containing an ok status or a description of the error
+        """
+        value = ''
+        if job_id is not None:
+            try:
+                command_line = SLURM_SSH_COMMAND + \
+                               'scontrol show job ' + job_id
+                process = subprocess.Popen(
+                    [command_line],
+                    shell=True,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE,
+                    stderr=subprocess.PIPE)
+                output = process.communicate()[0]
+                value = re.search(attribute + r'=(\w+)', output).group(1)
+                log.info(1, attribute + ' = ' + value)
+                return value
+            except OSError as e:
+                log.error(str(e))
+        return value
+
+    @staticmethod
+    def _file_name(session, extension):
+        """
+        Returns the contents of the log file with the specified extension
+        :param session: The session to be queried
+        :param extension: file extension (typically err or out)
+        :return: A string containing the error log
+        """
+        return settings.SLURM_OUTPUT_PREFIX + '_' + str(session.job_id) + \
+               '_' + session.renderer_id + '_' + extension
+
+    def _rendering_resource_log(self, session, extension):
+        """
+        Returns the contents of the specified file
+        :param session: The session to be queried
+        :param extension: File extension (typically err or out)
+        :return: A string containing the log
+        """
+        try:
+            result = 'Not currently available'
+            if session.status in [SESSION_STATUS_STARTING, SESSION_STATUS_RUNNING]:
+                filename = self._file_name(session, extension)
+                command_line = SLURM_SSH_COMMAND + 'cat ' + filename
+                log.info(1, 'Querying log: ' + command_line)
+                process = subprocess.Popen(
+                    [command_line],
+                    shell=True,
+                    stdin=subprocess.PIPE,
+                    stdout=subprocess.PIPE)
+                output = process.communicate()[0]
+                result = output
+            return result
+        except OSError as e:
+            return str(e)
+        except IOError as e:
+            return str(e)
+
 
 # Global job manager used for all allocations
 globalJobManager = JobManager()
