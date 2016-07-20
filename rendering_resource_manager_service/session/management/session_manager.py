@@ -38,7 +38,8 @@ from django.http import HttpResponse
 from rendering_resource_manager_service.config.models import SystemGlobalSettings
 from rendering_resource_manager_service.session.models import Session, \
     SESSION_STATUS_STOPPED, SESSION_STATUS_SCHEDULED, SESSION_STATUS_STARTING, \
-    SESSION_STATUS_RUNNING, SESSION_STATUS_STOPPING, SESSION_STATUS_GETTING_HOSTNAME
+    SESSION_STATUS_RUNNING, SESSION_STATUS_STOPPING, SESSION_STATUS_GETTING_HOSTNAME, \
+    SESSION_STATUS_SCHEDULING, SESSION_STATUS_FAILED
 from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser
 import rest_framework.status as http_status
@@ -249,7 +250,7 @@ class SessionManager(object):
         try:
             session = Session.objects.get(id=session_id)
             try:
-                url = 'http://' + session.http_host + global_settings.SLURM_HOST_DOMAIN + ':' + \
+                url = 'http://' + session.http_host + ':' + \
                       str(session.http_port) + '/' + consts.RR_SPECIFIC_COMMAND_VOCABULARY
                 log.info(1, 'Requesting vocabulary from ' + url)
                 r = requests.put(
@@ -287,21 +288,17 @@ class SessionManager(object):
 
             log.info(1, 'Current session status is: ' + str(session_status))
 
-            # Update the timestamp if the current value is expired
-            sgs = SystemGlobalSettings.objects.get()
-            if datetime.datetime.now() > session.valid_until:
-                session.valid_until = datetime.datetime.now() + datetime.timedelta(
-                    seconds=sgs.session_keep_alive_timeout)
-                session.save()
-            if session_status == SESSION_STATUS_SCHEDULED or \
+            if session_status == SESSION_STATUS_SCHEDULING:
+                status_description = str(session.renderer_id + ' is scheduled')
+            elif session_status == SESSION_STATUS_SCHEDULED or \
                session_status == SESSION_STATUS_GETTING_HOSTNAME:
                 if session.http_host != '':
-                    status_description = session.renderer_id + ' is starting...'
+                    status_description = session.renderer_id + ' is starting'
                     log.info(1, status_description)
                     session.status = SESSION_STATUS_STARTING
                     session.save()
                 else:
-                    status_description = str(session.renderer_id + ' is scheduled. Be patient...')
+                    status_description = str(session.renderer_id + ' is scheduled')
             elif session_status == SESSION_STATUS_STARTING:
                 # Rendering resource might be running but not yet capable of
                 # serving REST requests. The vocabulary is invoked to make
@@ -328,6 +325,12 @@ class SessionManager(object):
             elif session_status == SESSION_STATUS_RUNNING:
                 # Rendering resource is currently running
                 status_description = session.renderer_id + ' is up and running'
+                # Update the timestamp if the current value is expired
+                sgs = SystemGlobalSettings.objects.get()
+                if datetime.datetime.now() > session.valid_until:
+                    session.valid_until = datetime.datetime.now() + datetime.timedelta(
+                        seconds=sgs.session_keep_alive_timeout)
+                    session.save()
             elif session_status == SESSION_STATUS_STOPPING:
                 # Rendering resource is currently in the process of terminating.
                 status_description = str(session.renderer_id + ' is terminating...')
@@ -336,6 +339,8 @@ class SessionManager(object):
             elif session_status == SESSION_STATUS_STOPPED:
                 # Rendering resource is currently not active.
                 status_description = str(session.renderer_id + ' is not active')
+            elif session_status == SESSION_STATUS_FAILED:
+                status_description = str('Job allocation failed for ' + session.renderer_id)
 
             status_code = session.status
             response = [http_status.HTTP_200_OK, json.dumps({

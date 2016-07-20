@@ -5,6 +5,8 @@ Changelog {#Changelog}
 
 # Release 0.3.0
 
+* [39](https://github.com/BlueBrain/RenderingResourceManager/pull/39):
+  Deployment adjustments
 * [38](https://github.com/BlueBrain/RenderingResourceManager/pull/38):
   Removed dependency to Saga library
 

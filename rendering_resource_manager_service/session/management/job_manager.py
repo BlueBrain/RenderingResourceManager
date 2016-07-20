@@ -41,7 +41,7 @@ from rendering_resource_manager_service.config.management import \
 import rendering_resource_manager_service.utils.custom_logging as log
 from rendering_resource_manager_service.session.models import \
     SESSION_STATUS_STARTING, SESSION_STATUS_RUNNING, \
-    SESSION_STATUS_SCHEDULING, SESSION_STATUS_SCHEDULED
+    SESSION_STATUS_SCHEDULING, SESSION_STATUS_SCHEDULED, SESSION_STATUS_FAILED
 import rendering_resource_manager_service.service.settings as global_settings
 
 
@@ -102,6 +102,7 @@ class JobManager(object):
         :param job_information: Information about the job
         :return: A Json response containing on ok status or a description of the error
         """
+        status = None
         try:
             self._mutex.acquire()
             session.status = SESSION_STATUS_SCHEDULING
@@ -144,22 +145,25 @@ class JobManager(object):
             if len(re.findall('Granted', error)) != 0:
                 session.job_id = re.findall('\\d+', error)[0]
                 log.info(1, 'Allocated job ' + str(session.job_id))
+                session.status = SESSION_STATUS_SCHEDULED
+                session.save()
+                response = json.dumps({'message': 'Job scheduled', 'jobId': session.job_id})
+                status = [200, response]
             else:
+                session.status = SESSION_STATUS_FAILED
+                session.save()
                 log.error(error)
                 response = json.dumps({'contents': error})
-                return [400, response]
+                status = [400, response]
             process.stdin.close()
-            session.status = SESSION_STATUS_SCHEDULED
-            session.save()
-            response = json.dumps({'message': 'Job scheduled', 'jobId': session.job_id})
-            return [200, response]
         except OSError as e:
             log.error(str(e))
             response = json.dumps({'contents': str(e)})
-            return [400, response]
+            status = [400, response]
         finally:
             if self._mutex.locked():
                 self._mutex.release()
+        return status
 
     def start(self, session, job_information):
         """
@@ -210,7 +214,7 @@ class JobManager(object):
             command_line = '/usr/bin/ssh -i ' + \
                            global_settings.SLURM_SSH_KEY + ' ' + \
                            global_settings.SLURM_USERNAME + '@' + \
-                           session.http_host + global_settings.SLURM_HOST_DOMAIN
+                           session.http_host
 
             log.info(1, 'Connect to cluster machine: ' + command_line)
             process = subprocess.Popen(
@@ -254,7 +258,7 @@ class JobManager(object):
             if setting.graceful_exit:
                 log.info(1, 'Gracefully exiting rendering resource')
                 try:
-                    url = 'http://' + session.http_host + global_settings.SLURM_HOST_DOMAIN + \
+                    url = 'http://' + session.http_host + \
                           ':' + str(session.http_port) + '/' + \
                           settings.RR_SPECIFIC_COMMAND_EXIT
                     log.info(1, url)
@@ -313,7 +317,7 @@ class JobManager(object):
         :param job_id: The ID of the job
         :return: The hostname of the host if the job is running, empty otherwise
         """
-        return self._query(job_id, 'BatchHost')
+        return self._query(job_id, 'BatchHost') + global_settings.SLURM_HOST_DOMAIN
 
     def job_information(self, job_id):
         """
