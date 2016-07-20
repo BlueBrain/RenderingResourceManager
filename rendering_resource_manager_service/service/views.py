@@ -27,7 +27,7 @@ This modules allows integration of this application into the HBP collab
 
 from django.http import HttpResponse
 import json
-import urllib2
+import requests
 from rendering_resource_manager_service.service.settings import SOCIAL_AUTH_HBP_KEY
 
 HBP_ENV_URL = 'https://collab.humanbrainproject.eu/config.json'
@@ -37,10 +37,9 @@ HBP_ENV_URL = 'https://collab.humanbrainproject.eu/config.json'
 def config(request):
     '''Render the config file'''
 
-    res = urllib2.urlopen(urllib2.Request(url=HBP_ENV_URL))
-    conf = res.read()
-    res.close()
-    json_response = json.loads(conf)
+    r = requests.get(url=HBP_ENV_URL)
+    json_response = json.loads(r.text)
+    r.close()
 
     # Use this app client ID
     json_response['auth']['clientId'] = SOCIAL_AUTH_HBP_KEY
