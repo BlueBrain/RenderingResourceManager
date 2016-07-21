@@ -65,6 +65,8 @@ class TestSessionManager(TestCase):
         params['nb_gpus'] = 1
         params['graceful_exit'] = True
         params['wait_until_running'] = True
+        params['name'] = 'name'
+        params['description'] = 'description'
         status = manager.create(params)
         nt.assert_true(status[0] == 201)
         # Delete Settings
@@ -90,6 +92,8 @@ class TestSessionManager(TestCase):
         params['nb_gpus'] = 1
         params['graceful_exit'] = True
         params['wait_until_running'] = True
+        params['name'] = 'name'
+        params['description'] = 'description'
         status = manager.create(params)
         nt.assert_true(status[0] == 201)
         # Duplicate
@@ -127,6 +131,8 @@ class TestSessionManager(TestCase):
         params['nb_gpus'] = 1
         params['graceful_exit'] = True
         params['wait_until_running'] = True
+        params['name'] = 'name'
+        params['description'] = 'description'
         status = manager.create(params)
         nt.assert_true(status[0] == 201)
 
@@ -147,6 +153,8 @@ class TestSessionManager(TestCase):
         params['nb_gpus'] = 1
         params['graceful_exit'] = True
         params['wait_until_running'] = True
+        params['name'] = 'name'
+        params['description'] = 'description'
         status = manager.create(params)
         nt.assert_true(status[0] == 201)
         status = manager.list(RenderingResourceSettingsSerializer)
@@ -170,7 +178,9 @@ class TestSessionManager(TestCase):
                     '"nb_cpus": 1, ' \
                     '"nb_gpus": 1, ' \
                     '"graceful_exit": true, ' \
-                    '"wait_until_running": true}, ' \
+                    '"wait_until_running": true, ' \
+                    '"name": "name", ' \
+                    '"description", "description"}, ' \
                     '{"id": "rtneuron", ' \
                     '"command_line": "rtneuron-app.py", ' \
                     '"environment_variables": ' \
@@ -187,7 +197,9 @@ class TestSessionManager(TestCase):
                     '"nb_cpus": 1, ' \
                     '"nb_gpus": 1, ' \
                     '"graceful_exit": true, ' \
-                    '"wait_until_running": true}' \
+                    '"wait_until_running": true, ' \
+                    '"name": "name", ' \
+                    '"description", "description"}' \
                     ']'
         nt.assert_true(value == reference)
 
@@ -210,6 +222,8 @@ class TestSessionManager(TestCase):
         params['nb_gpus'] = 1
         params['graceful_exit'] = True
         params['wait_until_running'] = True
+        params['name'] = 'name'
+        params['description'] = 'description'
         status = manager.create(params)
         nt.assert_true(status[0] == 201)
 
