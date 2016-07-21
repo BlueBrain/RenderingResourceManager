@@ -62,7 +62,10 @@ class RenderingResourceSettingsManager(object):
                 nb_cpus=params['nb_cpus'],
                 nb_gpus=params['nb_gpus'],
                 graceful_exit=params['graceful_exit'],
-                wait_until_running=params['wait_until_running'])
+                wait_until_running=params['wait_until_running'],
+                name=params['name'],
+                description=params['description']
+            )
             with transaction.atomic():
                 settings.save(force_insert=True)
             msg = 'Rendering Resource ' + settings_id + ' successfully configured'
@@ -94,6 +97,8 @@ class RenderingResourceSettingsManager(object):
             settings.nb_gpus = params['nb_gpus']
             settings.graceful_exit = params['graceful_exit']
             settings.wait_until_running = params['wait_until_running']
+            settings.name=params['name']
+            settings.description=params['description']
             with transaction.atomic():
                 settings.save()
             return [200, '']

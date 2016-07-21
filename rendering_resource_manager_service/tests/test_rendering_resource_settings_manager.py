@@ -180,7 +180,7 @@ class TestSessionManager(TestCase):
                     '"graceful_exit": true, ' \
                     '"wait_until_running": true, ' \
                     '"name": "name", ' \
-                    '"description", "description"}, ' \
+                    '"description": "description"}, ' \
                     '{"id": "rtneuron", ' \
                     '"command_line": "rtneuron-app.py", ' \
                     '"environment_variables": ' \
@@ -199,8 +199,11 @@ class TestSessionManager(TestCase):
                     '"graceful_exit": true, ' \
                     '"wait_until_running": true, ' \
                     '"name": "name", ' \
-                    '"description", "description"}' \
+                    '"description": "description"}' \
                     ']'
+
+        print value
+
         nt.assert_true(value == reference)
 
     def test_get_by_name_settings(self):
