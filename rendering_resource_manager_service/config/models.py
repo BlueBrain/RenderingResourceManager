@@ -47,6 +47,8 @@ class RenderingResourceSettings(models.Model):
     nb_gpus = models.IntegerField(default=1)
     graceful_exit = models.BooleanField(default=True)
     wait_until_running = models.BooleanField(default=True)
+    name = models.CharField(max_length=4096, default='')
+    description = models.CharField(max_length=4096, default='')
 
     class Meta(object):
         """
@@ -60,7 +62,8 @@ class RenderingResourceSettings(models.Model):
             'scheduler_rest_parameters_format',
             'project', 'queue', 'exclusive',
             'nb_nodes', 'nb_cpus', 'nb_gpus',
-            'graceful_exit', 'wait_until_running')
+            'graceful_exit', 'wait_until_running',
+            'name', 'description')
 
     def __str__(self):
         return '%s' % self.id
