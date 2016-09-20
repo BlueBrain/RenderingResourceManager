@@ -429,7 +429,7 @@ class CommandViewSet(viewsets.ModelViewSet):
         # check if the hostname of the rendering resource is currently available
         contents = 'Rendering resource is currently unavailable'
         if session.job_id:
-            contents = job_manager.globalJobManager.job_information(session)
+            contents = job_manager.globalJobManager.job_information(session.job_id)
         response = json.dumps({'contents': str(contents)})
         return [200, response]
 
