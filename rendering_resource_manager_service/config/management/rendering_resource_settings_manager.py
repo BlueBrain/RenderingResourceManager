@@ -31,8 +31,10 @@ and ensures persistent storage in a database
 
 from rendering_resource_manager_service.config.models import RenderingResourceSettings
 import rendering_resource_manager_service.utils.custom_logging as log
+import rest_framework.status as http_status
 from django.db import IntegrityError, transaction
 from rest_framework.renderers import JSONRenderer
+import json
 
 
 class RenderingResourceSettingsManager(object):
@@ -47,7 +49,7 @@ class RenderingResourceSettingsManager(object):
         :param params Settings for the new rendering resource
         """
         try:
-            settings_id = params['id']
+            settings_id = params['id'].lower()
             settings = RenderingResourceSettings(
                 id=settings_id,
                 command_line=str(params['command_line']),
@@ -69,11 +71,12 @@ class RenderingResourceSettingsManager(object):
             with transaction.atomic():
                 settings.save(force_insert=True)
             msg = 'Rendering Resource ' + settings_id + ' successfully configured'
-            log.debug(1, msg)
-            return [201, msg]
+            response = json.dumps({'contents': msg})
+            return [http_status.HTTP_201_CREATED, response]
         except IntegrityError as e:
             log.error(str(e))
-            return [409, str(e)]
+            response = json.dumps({'contents': str(e)})
+            return [http_status.HTTP_409_CONFLICT, response]
 
     @classmethod
     def update(cls, params):
@@ -82,7 +85,7 @@ class RenderingResourceSettingsManager(object):
         :param params new config for the rendering resource
         """
         try:
-            settings_id = params['id']
+            settings_id = params['id'].lower()
             settings = RenderingResourceSettings.objects.get(id=settings_id)
             settings.command_line = params['command_line']
             settings.environment_variables = params['environment_variables']
@@ -97,14 +100,14 @@ class RenderingResourceSettingsManager(object):
             settings.nb_gpus = params['nb_gpus']
             settings.graceful_exit = params['graceful_exit']
             settings.wait_until_running = params['wait_until_running']
-            settings.name=params['name']
-            settings.description=params['description']
+            settings.name = params['name']
+            settings.description = params['description']
             with transaction.atomic():
                 settings.save()
-            return [200, '']
+            return [http_status.HTTP_200_OK, '']
         except RenderingResourceSettings.DoesNotExist as e:
             log.error(str(e))
-            return [404, str(e)]
+            return [http_status.HTTP_404_NOT_FOUND, str(e)]
 
     @classmethod
     def list(cls, serializer):
@@ -114,7 +117,8 @@ class RenderingResourceSettingsManager(object):
         :param serializer: Serializer used for formatting the list of session
         """
         settings = RenderingResourceSettings.objects.all()
-        return [200, JSONRenderer().render(serializer(settings, many=True).data)]
+        return [http_status.HTTP_200_OK,
+                JSONRenderer().render(serializer(settings, many=True).data)]
 
     @staticmethod
     def get_by_id(settings_id):
@@ -134,10 +138,10 @@ class RenderingResourceSettingsManager(object):
             settings = RenderingResourceSettings.objects.get(id=settings_id)
             with transaction.atomic():
                 settings.delete()
-            return [200, 'Settings successfully deleted']
+            return [http_status.HTTP_200_OK, 'Settings successfully deleted']
         except RenderingResourceSettings.DoesNotExist as e:
             log.error(str(e))
-            return [404, str(e)]
+            return [http_status.HTTP_404_NOT_FOUND, str(e)]
 
     @staticmethod
     def format_rest_parameters(string_format, hostname, port, schema):
@@ -162,4 +166,4 @@ class RenderingResourceSettingsManager(object):
         """
         with transaction.atomic():
             RenderingResourceSettings.objects.all().delete()
-        return [200, 'Settings cleared']
+        return [http_status.HTTP_200_OK, 'Settings cleared']

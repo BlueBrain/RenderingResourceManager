@@ -325,7 +325,7 @@ class JobManager(object):
         :param job_id: The ID of the job
         :return: A string containing the status of the job
         """
-        return self._query(job_id, 'JobStatus')
+        return self._query(job_id)
 
     def rendering_resource_out_log(self, session):
         """
@@ -344,7 +344,7 @@ class JobManager(object):
         return self._rendering_resource_log(session, settings.SLURM_ERR_FILE)
 
     @staticmethod
-    def _query(job_id, attribute):
+    def _query(job_id, attribute=None):
         """
         Verifies that a given job is up and running
         :param job_id: The ID of the job
@@ -354,7 +354,7 @@ class JobManager(object):
         if job_id is not None:
             try:
                 command_line = SLURM_SSH_COMMAND + \
-                               'scontrol show job ' + job_id
+                               'scontrol show job ' + str(job_id)
                 process = subprocess.Popen(
                     [command_line],
                     shell=True,
@@ -362,6 +362,8 @@ class JobManager(object):
                     stdout=subprocess.PIPE,
                     stderr=subprocess.PIPE)
                 output = process.communicate()[0]
+                if attribute is None:
+                    return output
                 value = re.search(attribute + r'=(\w+)', output).group(1)
                 log.info(1, attribute + ' = ' + value)
                 return value
