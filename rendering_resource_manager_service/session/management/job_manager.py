@@ -116,9 +116,9 @@ class JobManager(object):
                 options += ' --exclusive'
             if rr_settings.nb_nodes != 0:
                 options += ' -N ' + str(rr_settings.nb_nodes)
-            else:
-                options += ' -c ' + str(rr_settings.nb_cpus)
-                options += ' --gres=gpu:' + str(rr_settings.nb_gpus)
+
+            options += ' -c ' + str(rr_settings.nb_cpus)
+            options += ' --gres=gpu:' + str(rr_settings.nb_gpus)
 
             if job_information.reservation != '':
                 options += ' --reservation=' + job_information.reservation
@@ -132,6 +132,7 @@ class JobManager(object):
                 ' -p ' + rr_settings.queue + \
                 ' --account=' + rr_settings.project + \
                 ' --job-name=' + job_name + \
+                ' --time=2:00:00' + \
                 options
             log.info(1, command_line)
             process = subprocess.Popen(
