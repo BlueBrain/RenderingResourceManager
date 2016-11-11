@@ -487,12 +487,9 @@ class CommandViewSet(viewsets.ModelViewSet):
             log.info(1, 'Querying ' + str(url))
             headers = tools.get_request_headers(request)
 
-            input_data = None
-            if request.DATA:
-                input_data = json.dumps(request.DATA)
             response = requests.request(
                 method=request.method, timeout=settings.REQUEST_TIMEOUT,
-                url=url, headers=headers, data=input_data)
+                url=url, headers=headers, data=request.body)
 
             data = response.content
             response.close()
