@@ -66,6 +66,11 @@ class JobInformation(object):
         self.reservation = ''
         self.project = ''
         self.exclusive_allocation = False
+        self.nb_cpus = 0
+        self.nb_gpus = 0
+        self.nb_nodes = 0
+        self.queue = ''
+        self.allocation_time = ''
 
 
 class JobManager(object):
@@ -108,33 +113,9 @@ class JobManager(object):
             session.status = SESSION_STATUS_SCHEDULING
             session.save()
 
-            rr_settings = \
-                manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
-
-            options = ''
-            if rr_settings.exclusive:
-                options += ' --exclusive'
-            if rr_settings.nb_nodes != 0:
-                options += ' -N ' + str(rr_settings.nb_nodes)
-
-            options += ' -c ' + str(rr_settings.nb_cpus)
-            options += ' --gres=gpu:' + str(rr_settings.nb_gpus)
-
-            if job_information.reservation != '':
-                options += ' --reservation=' + job_information.reservation
-
             log.info(1, 'Scheduling job for session ' + session.id)
 
-            job_name = session.owner + '_' + rr_settings.id
-            command_line = SLURM_SSH_COMMAND + \
-                'salloc --no-shell' + \
-                ' --immediate=' + str(settings.SLURM_ALLOCATION_TIMEOUT) + \
-                ' -p ' + rr_settings.queue + \
-                ' --account=' + rr_settings.project + \
-                ' --job-name=' + job_name + \
-                ' --time=2:00:00' + \
-                options
-            log.info(1, command_line)
+            command_line = self._build_allocation_command(session, job_information)
             process = subprocess.Popen(
                 [command_line],
                 shell=True,
@@ -408,6 +389,58 @@ class JobManager(object):
             return str(e)
         except IOError as e:
             return str(e)
+
+    @staticmethod
+    def _build_allocation_command(session, job_information):
+        """
+        Builds the SLURM allocation command line
+        :param session: Session for which the rendering resource is started
+        :param job_information: Information about the job
+        :return: A string containing the SLURM command
+        """
+
+        rr_settings = \
+            manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
+
+        options = ''
+        if job_information.exclusive_allocation or rr_settings.exclusive:
+            options += ' --exclusive'
+
+        value = rr_settings.nb_nodes
+        if job_information.nb_nodes != 0:
+            value = job_information.nb_nodes
+        if value != 0:
+            options += ' -N ' + str(value)
+
+        value = rr_settings.nb_cpus
+        if job_information.nb_cpus != 0:
+            value = job_information.nb_cpus
+        options += ' -c ' + str(value)
+
+        value = rr_settings.nb_gpus
+        if job_information.nb_gpus != 0:
+            value = job_information.nb_gpus
+        options += ' --gres=gpu:' + str(value)
+
+        if job_information.reservation != '':
+            options += ' --reservation=' + job_information.reservation
+
+        allocation_time = global_settings.SLURM_DEFAULT_TIME
+        if job_information.allocation_time != '':
+            allocation_time = job_information.allocation_time
+
+        log.info(1, 'Scheduling job for session ' + session.id)
+
+        job_name = session.owner + '_' + rr_settings.id
+        command_line = SLURM_SSH_COMMAND + \
+                       'salloc --no-shell' + \
+                       ' --immediate=' + str(settings.SLURM_ALLOCATION_TIMEOUT) + \
+                       ' -p ' + rr_settings.queue + \
+                       ' --account=' + rr_settings.project + \
+                       ' --job-name=' + job_name + \
+                       ' --time=' + allocation_time + \
+                       options
+        return command_line
 
 
 # Global job manager used for all allocations

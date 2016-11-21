@@ -295,21 +295,14 @@ class CommandViewSet(viewsets.ModelViewSet):
         :rtype : An HTTP response containing the status and description of the command
         """
         job_information = job_manager.JobInformation()
-        try:
-            job_information.params = str(request.DATA['params'])
-        except KeyError:
-            log.debug(1, 'No parameters specified')
-
-        try:
-            job_information.environment = str(request.DATA['environment'])
-        except KeyError:
-            log.debug(1, 'No environment specified')
-
-        try:
-            job_information.reservation = str(request.DATA['reservation'])
-        except KeyError:
-            log.debug(1, 'No reservation name specified')
-
+        body = json.loads(str(request.DATA))
+        job_information.params = body.get('params')
+        job_information.environment = body.get('environment')
+        job_information.reservation = body.get('reservation')
+        job_information.nb_cpus = body.get('nb_cpus', 0)
+        job_information.nb_gpus = body.get('nb_gpus', 0)
+        job_information.nb_nodes = body.get('nb_nodes', 0)
+        job_information.allocation_time = body.get('allocation_time')
         session.http_host = ''
         session.http_port = consts.DEFAULT_RENDERER_HTTP_PORT + random.randint(0, 1000)
         status = job_manager.globalJobManager.schedule(session, job_information)
