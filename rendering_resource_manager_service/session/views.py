@@ -295,14 +295,15 @@ class CommandViewSet(viewsets.ModelViewSet):
         :rtype : An HTTP response containing the status and description of the command
         """
         job_information = job_manager.JobInformation()
-        body = json.loads(str(request.DATA))
+        body = request.DATA
         job_information.params = body.get('params')
         job_information.environment = body.get('environment')
         job_information.reservation = body.get('reservation')
         job_information.nb_cpus = body.get('nb_cpus', 0)
         job_information.nb_gpus = body.get('nb_gpus', 0)
         job_information.nb_nodes = body.get('nb_nodes', 0)
-        job_information.allocation_time = body.get('allocation_time')
+        job_information.exclusive_allocation = body.get('exclusive', False)
+        job_information.allocation_time = body.get('allocation_time', settings.SLURM_DEFAULT_TIME)
         session.http_host = ''
         session.http_port = consts.DEFAULT_RENDERER_HTTP_PORT + random.randint(0, 1000)
         status = job_manager.globalJobManager.schedule(session, job_information)
