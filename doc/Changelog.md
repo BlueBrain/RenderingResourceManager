@@ -3,6 +3,21 @@ Changelog {#Changelog}
 
 ## Rendering Resource Manager
 
+# Release 0.4.0
+
+* [46](https://github.com/BlueBrain/RenderingResourceManager/pull/46):
+  Fixed scheduling request management
+* [45](https://github.com/BlueBrain/RenderingResourceManager/pull/45):
+  Added extra parameters to scheduling API (nb_cpus, nb_gpus, etc)
+* [44](https://github.com/BlueBrain/RenderingResourceManager/pull/44):
+  Fixed request body forwarding to rendering resource
+* [43](https://github.com/BlueBrain/RenderingResourceManager/pull/43):
+  Fixed slurm command line arguments 
+* [42](https://github.com/BlueBrain/RenderingResourceManager/pull/42):
+  Unified json HTTP responses 
+* [40](https://github.com/BlueBrain/RenderingResourceManager/pull/40):
+  Added name and description to rendering resource configuration
+
 # Release 0.3.0
 
 * [39](https://github.com/BlueBrain/RenderingResourceManager/pull/39):
