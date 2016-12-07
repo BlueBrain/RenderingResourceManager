@@ -13,6 +13,10 @@ DOC_MODULES=
 #no need to do coverage on the mock objects
 IGNORE_LINT=
 
+#need a later version than 1.4.1 to install ipywidgets and ipython
+#we choose 9.0.1 here to match the pip version in collab notebooks
+PYTHON_PIP_VERSION=pip==9.0.1
+
 ##### DO NOT MODIFY BELOW #####################
 
 ifndef CI_DIR
