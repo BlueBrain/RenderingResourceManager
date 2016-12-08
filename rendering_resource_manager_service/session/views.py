@@ -85,7 +85,7 @@ class SessionDetailsSerializer(serializers.ModelSerializer):
         """
         model = Session
         fields = ('id', 'owner', 'created', 'renderer_id', 'job_id', 'status',
-                  'http_host', 'http_port', 'valid_until')
+                  'http_host', 'http_port', 'valid_until', 'cluster_node')
 
 
 class CommandSerializer(serializers.ModelSerializer):
@@ -423,7 +423,7 @@ class CommandViewSet(viewsets.ModelViewSet):
         # check if the hostname of the rendering resource is currently available
         contents = 'Rendering resource is currently unavailable'
         if session.job_id:
-            contents = job_manager.globalJobManager.job_information(session.job_id)
+            contents = job_manager.globalJobManager.job_information(session)
         response = json.dumps({'contents': str(contents)})
         return [200, response]
 
