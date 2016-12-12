@@ -56,7 +56,7 @@ SLURM_OUTPUT_PREFIX = '/gpfs/bbp.cscs.ch/home/' + global_settings.SLURM_USERNAME
                       '/var/log/vws'
 SLURM_ERR_FILE = 'err.log'
 SLURM_OUT_FILE = 'out.log'
-SLURM_ALLOCATION_TIMEOUT = 20
+SLURM_ALLOCATION_TIMEOUT = 10
 
 # Session management
 RRM_SPECIFIC_COMMAND_KEEPALIVE = 'keepalive'

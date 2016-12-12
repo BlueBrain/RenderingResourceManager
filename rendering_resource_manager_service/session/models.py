@@ -55,6 +55,7 @@ class Session(models.Model):
     command = models.CharField(max_length=20, default='')
     parameters = models.CharField(max_length=2048, default='')
     status = models.IntegerField(default=0)
+    cluster_node = models.CharField(max_length=512, default='')
 
     class Meta(object):
         """
