@@ -61,7 +61,7 @@ class RenderingResourceSettingsSerializer(serializers.ModelSerializer):
                   'name', 'description')
 
 
-class RenderingResourceSettingsDetailsViewSet(viewsets.ModelViewSet):
+class RenderingResourceSettingsViewSet(viewsets.ModelViewSet):
     """
     ViewSets define the default view behavior
     """
@@ -71,25 +71,16 @@ class RenderingResourceSettingsDetailsViewSet(viewsets.ModelViewSet):
 
     @classmethod
     # pylint: disable=W0613
-    def delete(cls, request, pk):
+    def delete(cls, request):
         """
         Removes the config for a new rendering resource
         :param request The REST request
-        :param pk Identifier of the Rendering resource config to remove
         :rtype A Json response containing on ok status or a description of the error
         """
         manager = rendering_resource_settings_manager.RenderingResourceSettingsManager()
-        response = manager.delete(pk)
+        parameters = request.DATA
+        response = manager.delete(parameters['id'])
         return HttpResponse(status=response[0], content=response[1])
-
-
-class RenderingResourceSettingsViewSet(viewsets.ModelViewSet):
-    """
-    ViewSets define the default view behavior
-    """
-
-    queryset = RenderingResourceSettings.objects.all()
-    serializer_class = RenderingResourceSettingsSerializer
 
     @classmethod
     def create(cls, request):
