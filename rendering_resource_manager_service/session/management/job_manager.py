@@ -304,7 +304,7 @@ class JobManager(object):
         :param session: Current user session
         :return: The hostname of the host if the job is running, empty otherwise
         """
-        return self._query(session, 'BatchHost')
+        return self._query(session, 'BatchHost') + '.' + str(session.cluster_node.partition('.')[2])
 
     def job_information(self, session):
         """
@@ -429,7 +429,7 @@ class JobManager(object):
             value = job_information.nb_gpus
         options += ' --gres=gpu:' + str(value)
 
-        if job_information.reservation != '':
+        if job_information.reservation != '' and job_information.reservation is not None:
             options += ' --reservation=' + job_information.reservation
 
         allocation_time = global_settings.SLURM_DEFAULT_TIME
