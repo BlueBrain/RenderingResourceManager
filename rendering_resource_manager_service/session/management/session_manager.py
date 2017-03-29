@@ -3,6 +3,7 @@
 # pylint: disable=E1101
 # pylint: disable=W0403
 # pylint: disable=R0912
+# pylint: disable=R0915
 
 # Copyright (c) 2014-2015, Human Brain Project
 #                          Cyrille Favreau <cyrille.favreau@epfl.ch>
