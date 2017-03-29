@@ -23,7 +23,6 @@
 
 """app.py"""
 import os
-import sys
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE',
                       'rendering_resource_manager_service.service.settings')
