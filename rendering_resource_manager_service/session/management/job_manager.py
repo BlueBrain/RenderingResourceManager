@@ -194,7 +194,7 @@ class JobManager(object):
             # Output redirection
             full_command += ' > ' + self._file_name(session, settings.SLURM_OUT_FILE)
             full_command += ' 2> ' + self._file_name(session, settings.SLURM_ERR_FILE)
-            full_command += ' &\n'
+            full_command += '\n'
 
             # Start Process on cluster
             command_line = '/usr/bin/ssh -i ' + \
@@ -216,7 +216,10 @@ class JobManager(object):
             log.info(1, output)
             process.stdin.close()
 
-            session.status = SESSION_STATUS_STARTING
+            if rr_settings.wait_until_running:
+                session.status = SESSION_STATUS_STARTING
+            else:
+                session.status = SESSION_STATUS_RUNNING
             session.save()
             response = json.dumps({'message': session.renderer_id + ' successfully started'})
             return [200, response]
