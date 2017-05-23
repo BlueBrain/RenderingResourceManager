@@ -63,6 +63,7 @@ class RenderingResourceSettingsManager(object):
                 nb_nodes=params['nb_nodes'],
                 nb_cpus=params['nb_cpus'],
                 nb_gpus=params['nb_gpus'],
+                memory=params['memory'],
                 graceful_exit=params['graceful_exit'],
                 wait_until_running=params['wait_until_running'],
                 name=params['name'],
@@ -98,6 +99,7 @@ class RenderingResourceSettingsManager(object):
             settings.nb_nodes = params['nb_nodes']
             settings.nb_cpus = params['nb_cpus']
             settings.nb_gpus = params['nb_gpus']
+            settings.memory = params['memory']
             settings.graceful_exit = params['graceful_exit']
             settings.wait_until_running = params['wait_until_running']
             settings.name = params['name']

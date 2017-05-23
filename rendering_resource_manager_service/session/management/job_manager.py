@@ -68,6 +68,7 @@ class JobInformation(object):
         self.nb_cpus = 0
         self.nb_gpus = 0
         self.nb_nodes = 0
+        self.memory = 0
         self.queue = ''
         self.allocation_time = ''
 
@@ -169,15 +170,17 @@ class JobManager(object):
 
             # Modules
             full_command = 'module purge\n'
-            values = rr_settings.modules.split()
-            for module in values:
-                full_command += 'module load ' + module.strip() + '\n'
+            if rr_settings.modules is not None:
+                values = rr_settings.modules.split()
+                for module in values:
+                    full_command += 'module load ' + module.strip() + '\n'
 
             # Environment variables
-            values = rr_settings.environment_variables.split()
-            values += job_information.environment.split()
-            for variable in values:
-                full_command += variable + ' '
+            if rr_settings.environment_variables is not None:
+                values = rr_settings.environment_variables.split()
+                values += job_information.environment.split()
+                for variable in values:
+                    full_command += variable + ' '
 
             # Command lines parameters
             rest_parameters = manager.RenderingResourceSettingsManager.format_rest_parameters(
@@ -185,11 +188,12 @@ class JobManager(object):
                 str(session.http_host),
                 str(session.http_port),
                 'rest' + str(rr_settings.id + session.id))
-            values = rest_parameters.split()
-            values += job_information.params.split()
-            full_command += rr_settings.command_line
-            for parameter in values:
-                full_command += ' ' + parameter
+            if rr_settings.environment_variables != '':
+                values = rest_parameters.split()
+                values += job_information.params.split()
+                full_command += rr_settings.command_line
+                for parameter in values:
+                    full_command += ' ' + parameter
 
             # Output redirection
             full_command += ' > ' + self._file_name(session, settings.SLURM_OUT_FILE)
@@ -431,6 +435,11 @@ class JobManager(object):
         if job_information.nb_gpus != 0:
             value = job_information.nb_gpus
         options += ' --gres=gpu:' + str(value)
+
+        value = rr_settings.memory
+        if job_information.memory != 0:
+            value = job_information.memory
+        options += ' --mem=' + str(value)
 
         if job_information.reservation != '' and job_information.reservation is not None:
             options += ' --reservation=' + job_information.reservation
