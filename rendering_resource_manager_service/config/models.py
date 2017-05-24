@@ -45,6 +45,7 @@ class RenderingResourceSettings(models.Model):
     nb_nodes = models.IntegerField(default=0)
     nb_cpus = models.IntegerField(default=1)
     nb_gpus = models.IntegerField(default=1)
+    memory = models.IntegerField(default=0)
     graceful_exit = models.BooleanField(default=True)
     wait_until_running = models.BooleanField(default=True)
     name = models.CharField(max_length=4096, default='')
@@ -61,7 +62,7 @@ class RenderingResourceSettings(models.Model):
             'process_rest_parameters_format',
             'scheduler_rest_parameters_format',
             'project', 'queue', 'exclusive',
-            'nb_nodes', 'nb_cpus', 'nb_gpus',
+            'nb_nodes', 'nb_cpus', 'nb_gpus', 'memory',
             'graceful_exit', 'wait_until_running',
             'name', 'description')
 

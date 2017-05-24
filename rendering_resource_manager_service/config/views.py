@@ -56,7 +56,7 @@ class RenderingResourceSettingsSerializer(serializers.ModelSerializer):
                   'process_rest_parameters_format',
                   'scheduler_rest_parameters_format',
                   'project', 'queue', 'exclusive',
-                  'nb_nodes', 'nb_cpus', 'nb_gpus',
+                  'nb_nodes', 'nb_cpus', 'nb_gpus', 'memory',
                   'graceful_exit', 'wait_until_running',
                   'name', 'description')
 

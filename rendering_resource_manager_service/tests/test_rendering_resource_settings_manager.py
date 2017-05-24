@@ -63,6 +63,7 @@ class TestSessionManager(TestCase):
         params['nb_nodes'] = 1
         params['nb_cpus'] = 1
         params['nb_gpus'] = 1
+        params['memory'] = 0
         params['graceful_exit'] = True
         params['wait_until_running'] = True
         params['name'] = 'name'
@@ -90,6 +91,7 @@ class TestSessionManager(TestCase):
         params['nb_nodes'] = 1
         params['nb_cpus'] = 1
         params['nb_gpus'] = 1
+        params['memory'] = 0
         params['graceful_exit'] = True
         params['wait_until_running'] = True
         params['name'] = 'name'
@@ -129,6 +131,7 @@ class TestSessionManager(TestCase):
         params['nb_nodes'] = 1
         params['nb_cpus'] = 1
         params['nb_gpus'] = 1
+        params['memory'] = 0
         params['graceful_exit'] = True
         params['wait_until_running'] = True
         params['name'] = 'name'
@@ -151,6 +154,7 @@ class TestSessionManager(TestCase):
         params['nb_nodes'] = 1
         params['nb_cpus'] = 1
         params['nb_gpus'] = 1
+        params['memory'] = 0
         params['graceful_exit'] = True
         params['wait_until_running'] = True
         params['name'] = 'name'
@@ -177,6 +181,7 @@ class TestSessionManager(TestCase):
                     '"nb_nodes": 1, ' \
                     '"nb_cpus": 1, ' \
                     '"nb_gpus": 1, ' \
+                    '"memory": 0, ' \
                     '"graceful_exit": true, ' \
                     '"wait_until_running": true, ' \
                     '"name": "name", ' \
@@ -196,6 +201,7 @@ class TestSessionManager(TestCase):
                     '"nb_nodes": 1, ' \
                     '"nb_cpus": 1, ' \
                     '"nb_gpus": 1, ' \
+                    '"memory": 0, ' \
                     '"graceful_exit": true, ' \
                     '"wait_until_running": true, ' \
                     '"name": "name", ' \
@@ -223,6 +229,7 @@ class TestSessionManager(TestCase):
         params['nb_nodes'] = 1
         params['nb_cpus'] = 1
         params['nb_gpus'] = 1
+        params['memory'] = 0
         params['graceful_exit'] = True
         params['wait_until_running'] = True
         params['name'] = 'name'
