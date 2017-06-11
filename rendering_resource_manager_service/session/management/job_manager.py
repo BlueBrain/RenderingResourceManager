@@ -198,7 +198,7 @@ class JobManager(object):
             # Output redirection
             full_command += ' > ' + self._file_name(session, settings.SLURM_OUT_FILE)
             full_command += ' 2> ' + self._file_name(session, settings.SLURM_ERR_FILE)
-            full_command += '\n'
+            full_command += ' &\n'
 
             # Start Process on cluster
             command_line = '/usr/bin/ssh -i ' + \
