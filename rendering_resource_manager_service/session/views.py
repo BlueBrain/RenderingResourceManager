@@ -177,13 +177,13 @@ class SessionViewSet(viewsets.ModelViewSet):
         :rtype : An HTTP response containing on ok status or a description of the error
         """
         sm = session_manager.SessionManager()
-        # Create new Cookie ID for new session
+        # Create new session ID
         session_id = sm.get_session_id()
         try:
             status = sm.create_session(
                 session_id, request.DATA['owner'], request.DATA['renderer_id'])
-            response = HttpResponse(status=status[0], content=status[1])
-            response.set_cookie(consts.COOKIE_ID, session_id)
+            response = HttpResponse(status=status[0],
+                                    content=json.dumps({'session_id': str(session_id)}))
             log.info(1, 'Session created ' + str(session_id))
             return response
         except KeyError as e:

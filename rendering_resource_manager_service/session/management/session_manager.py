@@ -392,8 +392,4 @@ class SessionManager(object):
         :return: a UUID session identifier
         """
         log.debug(1, 'Getting cookie from request')
-        try:
-            session_id = request.COOKIES[consts.COOKIE_ID]
-        except KeyError:
-            session_id = request.QUERY_PARAMS[consts.REQUEST_PARAMETER_SESSIONID]
-        return session_id
+        return request.QUERY_PARAMS[consts.REQUEST_PARAMETER_SESSIONID]
