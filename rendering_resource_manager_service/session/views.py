@@ -271,9 +271,9 @@ class CommandViewSet(viewsets.ModelViewSet):
                 cmd = url[url.find(prefix) + len(prefix) + 1: len(url)]
                 response = cls.__forward_request(session, cmd, request)
             return response
-        except KeyError as e:
+        except (KeyError, TypeError) as e:
             log.debug(1, str(traceback.format_exc(e)))
-            response = json.dumps({'contents': 'Cookie ' + str(e) + ' is missing'})
+            response = json.dumps({'contents': 'Cookie is missing'})
             return HttpResponse(status=404, content=response)
         except Session.DoesNotExist as e:
             log.debug(1, str(traceback.format_exc(e)))

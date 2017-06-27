@@ -51,6 +51,9 @@ REQUEST_ARGUMENT_COMMAND = "command"
 REQUEST_ARGUMENT_RENDERER = "renderer"
 REQUEST_ARGUMENT_PARAMS = "parameters"
 
+# Request parameters
+REQUEST_PARAMETER_SESSIONID = "sessionid"
+
 # SLURM
 SLURM_OUTPUT_PREFIX = '/gpfs/bbp.cscs.ch/home/' + global_settings.SLURM_USERNAME +\
                       '/var/log/vws'
