@@ -394,7 +394,6 @@ class SessionManager(object):
         log.debug(1, 'Getting cookie from request')
         try:
             session_id = request.COOKIES[consts.COOKIE_ID]
-        except KeyError as e:
-            session_id = SessionManager.get_session_id()
-            log.info(1, 'Cookie ' + str(e) + ' is missing. New session ID is ' + str(session_id))
+        except KeyError:
+            session_id = request.QUERY_PARAMS[consts.REQUEST_PARAMETER_SESSIONID]
         return session_id
