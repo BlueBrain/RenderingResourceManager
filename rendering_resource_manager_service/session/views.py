@@ -360,7 +360,7 @@ class CommandViewSet(viewsets.ModelViewSet):
             session.status = SESSION_STATUS_GETTING_HOSTNAME
             session.save()
             log.info(1, 'Querying JOB hostname for job id: ' + str(session.job_id))
-            hostname = job_manager.globalJobManager.hostname(session.job_id)
+            hostname = job_manager.globalJobManager.hostname(session)
             if hostname == '':
                 msg = 'Job scheduled but ' + session.renderer_id + ' is not yet running'
                 log.error(msg)

@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 
-# Copyright (c) 2014-2015, Human Brain Project
+# Copyright (c) 2014-2017, Human Brain Project
 #                          Cyrille Favreau <cyrille.favreau@epfl.ch>
 #
 # This file is part of RenderingResourceManager
@@ -22,4 +22,4 @@
 # All rights reserved. Do not distribute without further notice.
 
 ''' version '''
-VERSION = "0.5.6"
+VERSION = "0.5.7.dev0"
