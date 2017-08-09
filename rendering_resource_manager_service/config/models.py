@@ -44,7 +44,7 @@ class RenderingResourceSettings(models.Model):
     exclusive = models.BooleanField(default=False)
     nb_nodes = models.IntegerField(default=0)
     nb_cpus = models.IntegerField(default=1)
-    nb_gpus = models.IntegerField(default=1)
+    nb_gpus = models.IntegerField(default=0)
     memory = models.IntegerField(default=0)
     graceful_exit = models.BooleanField(default=True)
     wait_until_running = models.BooleanField(default=True)
