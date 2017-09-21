@@ -311,7 +311,10 @@ class JobManager(object):
         :param session: Current user session
         :return: The hostname of the host if the job is running, empty otherwise
         """
-        return self._query(session, 'BatchHost') + '.' + str(session.cluster_node.partition('.')[2])
+        hostname = self._query(session, 'BatchHost')
+        if hostname != '':
+            hostname = hostname + '.' + str(session.cluster_node.partition('.')[2])
+        return hostname
 
     def job_information(self, session):
         """
@@ -359,8 +362,11 @@ class JobManager(object):
                 output = process.communicate()[0]
                 if attribute is None:
                     return output
-                value = re.search(attribute + r'=(\w+)', output).group(1)
-                log.info(1, attribute + ' = ' + value)
+                status = re.search(r'JobState=(\w+)', output).group(1)
+                if status != 'CANCELLED':
+                    value = re.search(attribute + r'=(\w+)', output).group(1)
+                    log.info(1, attribute + ' = ' + value)
+                log.info(1, 'Job status: ' + status + ' hostname: ' + value)
                 return value
             except OSError as e:
                 log.error(str(e))
