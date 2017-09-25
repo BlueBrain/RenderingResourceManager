@@ -250,38 +250,45 @@ class TestSessionManager(TestCase):
     def test_format_rest_parameters(self):
         log.debug(1, 'test_format_rest_parameters')
         manager = RenderingResourceSettingsManager()
+        job_id = '42'
         # test 1
         value = manager.format_rest_parameters(
             '--rest ${rest_hostname}:${rest_port}',
-            'localhost', 3000, 'schema')
+            'localhost', 3000, 'schema', job_id)
         nt.assert_true(value == '--rest localhost:3000')
 
         # test 2
         value = manager.format_rest_parameters(
             '--rest ${rest_hostname}:${rest_port} --rest-schema ${rest_schema}',
-            'localhost', 3000, 'schema')
+            'localhost', 3000, 'schema', job_id)
         nt.assert_true(value == '--rest localhost:3000 --rest-schema schema')
 
         # test 3
         value = manager.format_rest_parameters(
             '--rest ${rest_hostname}:${rest_port} --rest-schema ${rest_schema}',
-            'localhost', 3000, 'schema')
+            'localhost', 3000, 'schema', job_id)
         nt.assert_true(value == '--rest localhost:3000 --rest-schema schema')
 
         # test 4
         value = manager.format_rest_parameters(
             '--rest ${rest_hostname}:${rest_port} --rest-schema ${rest_schema}',
-            'localhost', '3000', 'schema')
+            'localhost', '3000', 'schema', job_id)
         nt.assert_true(value == '--rest localhost:3000 --rest-schema schema')
 
         # test 5
         value = manager.format_rest_parameters(
             '--rest $SLURMD_NODENAME:${rest_port}',
-            'localhost', 3000, 'schema')
+            'localhost', 3000, 'schema', job_id)
         nt.assert_true(value == '--rest $SLURMD_NODENAME:3000')
 
         # test 6
         value = manager.format_rest_parameters(
             '--rest ${rest_hostname}:${rest_port}:${rest_schema}',
-            'localhost', 3000, 'schema')
+            'localhost', 3000, 'schema', job_id)
         nt.assert_true(value == '--rest localhost:3000:schema')
+
+        # test 7
+        value = manager.format_rest_parameters(
+            '--jobid=${job_id} --rest ${rest_hostname}:${rest_port}:${rest_schema}',
+            'localhost', 3000, 'schema', job_id)
+        nt.assert_true(value == '--jobid=42 --rest localhost:3000:schema')
