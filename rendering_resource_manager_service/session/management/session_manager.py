@@ -39,8 +39,8 @@ from django.http import HttpResponse
 from rendering_resource_manager_service.config.models import SystemGlobalSettings
 from rendering_resource_manager_service.session.models import Session, \
     SESSION_STATUS_STOPPED, SESSION_STATUS_SCHEDULED, SESSION_STATUS_STARTING, \
-    SESSION_STATUS_RUNNING, SESSION_STATUS_STOPPING, SESSION_STATUS_GETTING_HOSTNAME, \
-    SESSION_STATUS_SCHEDULING, SESSION_STATUS_FAILED
+    SESSION_STATUS_RUNNING, SESSION_STATUS_STOPPING, SESSION_STATUS_BUSY, \
+    SESSION_STATUS_GETTING_HOSTNAME, SESSION_STATUS_SCHEDULING, SESSION_STATUS_FAILED
 from rest_framework.renderers import JSONRenderer
 from rest_framework.parsers import JSONParser
 import rest_framework.status as http_status
@@ -240,8 +240,8 @@ class SessionManager(object):
         log.debug(1, msg)
         return [http_status.HTTP_200_OK, msg]
 
-    @staticmethod
-    def request_vocabulary(session_id):
+    @classmethod
+    def request_vocabulary(cls, session_id):
         """
         Queries the rendering resource vocabulary
         :param session_id: Id of the session to be queried
@@ -261,12 +261,45 @@ class SessionManager(object):
                 r.close()
                 return [http_status.HTTP_200_OK, response]
             except requests.exceptions.RequestException as e:
+                # Failed to contact rendering resource, make sure that the corresponding
+                # job is still allocated
                 log.info(1, str(e))
+                jm = job_manager.JobManager()
+                hostname = ''
+                try:
+                    hostname = jm.hostname(session)
+                except AttributeError as e:
+                    log.error(str(e))
+
+                if hostname == '':
+                    log.info(1, 'Job has been cancelled. Destroying session')
+                    cls.delete_session(session_id)
+                    return [http_status.HTTP_404_NOT_FOUND, str(e)]
                 return [http_status.HTTP_503_SERVICE_UNAVAILABLE, str(e)]
         except Session.DoesNotExist as e:
             # Requested session does not exist
             log.info(1, str(e))
             return [http_status.HTTP_404_NOT_FOUND, str(e)]
+
+    @staticmethod
+    def __status_response(http_code, session_id, code, description, hostname, port):
+        """
+        Builds a JSon representation of the given parameters for HTTP responses
+        :param http_code: HTTP code
+        :param session_id: Session identifier
+        :param code: Status code
+        :param description: Status description
+        :param hostname: Hostname of the rendering resource
+        :param port: Port of the rendering resource
+        :return: JSon representation of the given parameters
+        """
+        return [http_code, json.dumps({
+            'session': str(session_id),
+            'code': code,
+            'description': description,
+            'hostname': hostname,
+            'port': str(port)
+        })]
 
     @staticmethod
     def query_status(session_id):
@@ -315,23 +348,55 @@ class SessionManager(object):
                 else:
                     log.info(1, 'Requesting rendering resource vocabulary')
                     status = SessionManager.request_vocabulary(session_id)
-                    if status[0] == http_status.HTTP_200_OK:
+                    if status[0] == http_status.HTTP_200_OK and \
+                                    status[0] != http_status.HTTP_404_NOT_FOUND:
                         status_description = session.renderer_id + ' is up and running'
                         log.info(1, status_description)
                         session.status = SESSION_STATUS_RUNNING
                         session.save()
+                    elif status[0] == http_status.HTTP_404_NOT_FOUND:
+                        return [http_status.HTTP_404_NOT_FOUND, 'Job has been cancelled']
                     else:
                         status_description = session.renderer_id + \
                             ' is starting but the HTTP interface is not yet available'
             elif session_status == SESSION_STATUS_RUNNING:
-                # Rendering resource is currently running
-                status_description = session.renderer_id + ' is up and running'
                 # Update the timestamp if the current value is expired
                 sgs = SystemGlobalSettings.objects.get()
                 if datetime.datetime.now() > session.valid_until:
                     session.valid_until = datetime.datetime.now() + datetime.timedelta(
                         seconds=sgs.session_keep_alive_timeout)
                     session.save()
+                status = SessionManager.request_vocabulary(session_id)
+                if status[0] == http_status.HTTP_200_OK:
+                    # Rendering resource is currently running
+                    status_description = session.renderer_id + ' is up and running'
+                elif status[0] == http_status.HTTP_404_NOT_FOUND:
+                    return SessionManager.__status_response(
+                        http_code=status[0], session_id=session_id,
+                        code=SESSION_STATUS_STOPPED, description='Job has been cancelled',
+                        hostname='', port=0)
+                else:
+                    # Rendering resource has been started but is not responding anymore, it is busy
+                    status_description = session.renderer_id + ' is busy'
+                    session.status = SESSION_STATUS_BUSY
+                    session.save()
+
+            elif session_status == SESSION_STATUS_BUSY:
+                status = SessionManager.request_vocabulary(session_id)
+                if status[0] == http_status.HTTP_200_OK:
+                    # Rendering resource is not busy anymore
+                    status_description = session.renderer_id + ' is up and running'
+                    session.status = SESSION_STATUS_RUNNING
+                    session.save()
+                else:
+                    if status[0] == http_status.HTTP_404_NOT_FOUND:
+                        return SessionManager.__status_response(
+                            http_code=status[0], session_id=session_id,
+                            code=SESSION_STATUS_STOPPED, description='Job has been cancelled',
+                            hostname='', port=0)
+                    else:
+                        status_description = session.renderer_id + ' is busy'
+
             elif session_status == SESSION_STATUS_STOPPING:
                 # Rendering resource is currently in the process of terminating.
                 status_description = str(session.renderer_id + ' is terminating...')
@@ -344,14 +409,10 @@ class SessionManager(object):
                 status_description = str('Job allocation failed for ' + session.renderer_id)
 
             status_code = session.status
-            response = [http_status.HTTP_200_OK, json.dumps({
-                'session': str(session_id),
-                'code': status_code,
-                'description': status_description,
-                'hostname': session.http_host,
-                'port': str(session.http_port),
-                })]
-            return response
+            return SessionManager.__status_response(
+                http_code=http_status.HTTP_200_OK, session_id=session_id,
+                code=status_code, description=status_description,
+                hostname=session.http_host, port=session.http_port)
         except Session.DoesNotExist as e:
             # Requested session does not exist
             log.error(str(e))

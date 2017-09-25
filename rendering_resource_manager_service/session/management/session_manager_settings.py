@@ -52,7 +52,7 @@ REQUEST_ARGUMENT_RENDERER = "renderer"
 REQUEST_ARGUMENT_PARAMS = "parameters"
 
 # Request parameters
-REQUEST_PARAMETER_SESSIONID = "sessionid"
+REQUEST_PARAMETER_SESSIONID = "session_id"
 
 # SLURM
 SLURM_OUTPUT_PREFIX = '/gpfs/bbp.cscs.ch/home/' + global_settings.SLURM_USERNAME +\
@@ -67,5 +67,5 @@ RRM_SPECIFIC_COMMAND_RESUME = 'resume'
 RRM_SPECIFIC_COMMAND_SUSPEND = 'suspend'
 
 # Rendering resource commands
-RR_SPECIFIC_COMMAND_VOCABULARY = 'zerobuf/render/fovcamera'
-RR_SPECIFIC_COMMAND_EXIT = 'zerobuf/render/exit'
+RR_SPECIFIC_COMMAND_VOCABULARY = 'registry'
+RR_SPECIFIC_COMMAND_EXIT = 'v1/exit'
