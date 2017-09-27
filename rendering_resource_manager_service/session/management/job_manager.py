@@ -187,7 +187,8 @@ class JobManager(object):
                 str(rr_settings.scheduler_rest_parameters_format),
                 str(session.http_host),
                 str(session.http_port),
-                'rest' + str(rr_settings.id + session.id))
+                'rest' + str(rr_settings.id + session.id),
+                str(session.job_id))
             if rr_settings.environment_variables != '':
                 values = rest_parameters.split()
                 values += job_information.params.split()

@@ -146,7 +146,7 @@ class RenderingResourceSettingsManager(object):
             return [http_status.HTTP_404_NOT_FOUND, str(e)]
 
     @staticmethod
-    def format_rest_parameters(string_format, hostname, port, schema):
+    def format_rest_parameters(string_format, hostname, port, schema, job_id):
         """
         Returns a string of rest parameters formatted according to the
         string_format argument
@@ -156,6 +156,7 @@ class RenderingResourceSettingsManager(object):
         :param schema Rest schema
         """
         response = string_format
+        response = response.replace('${job_id}', str(job_id))
         response = response.replace('${rest_hostname}', str(hostname))
         response = response.replace('${rest_port}', str(port))
         response = response.replace('${rest_schema}', str(schema))
