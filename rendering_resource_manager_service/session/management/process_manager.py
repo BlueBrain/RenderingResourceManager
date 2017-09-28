@@ -61,7 +61,8 @@ class ProcessManager(object):
                 str(settings.process_rest_parameters_format),
                 str(session_info.http_host),
                 str(session_info.http_port),
-                'rest' + str(settings.id + session_info.id))
+                'rest' + str(settings.id + session_info.id),
+                str(session_info.job_id))
 
             command_line = [
                 str(settings.command_line)
