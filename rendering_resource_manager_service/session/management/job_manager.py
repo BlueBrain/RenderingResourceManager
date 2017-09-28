@@ -1,11 +1,8 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-# pylint: disable=W0403
-# pylint: disable=R0915
 
-# Copyright (c) 2014-2015, Human Brain Project
+# Copyright (c) 2014-2017, Human Brain Project
 #                          Cyrille Favreau <cyrille.favreau@epfl.ch>
-#                          Daniel Nachbaur <daniel.nachbaur@epfl.ch>
 #
 # This file is part of RenderingResourceManager
 # <https://github.com/BlueBrain/RenderingResourceManager>
@@ -44,10 +41,7 @@ from rendering_resource_manager_service.session.models import \
     SESSION_STATUS_SCHEDULING, SESSION_STATUS_SCHEDULED, SESSION_STATUS_FAILED
 import rendering_resource_manager_service.service.settings as global_settings
 
-
-SLURM_SSH_COMMAND = '/usr/bin/ssh -i ' + \
-                  global_settings.SLURM_SSH_KEY + ' ' + \
-                  global_settings.SLURM_USERNAME + '@'
+_HBP_REGISTRY_URL = "https://hbp-unic.fz-juelich.de:7112/HBP/rest/registries/default_registry"
 
 
 class JobInformation(object):
@@ -73,7 +67,7 @@ class JobInformation(object):
         self.allocation_time = ''
 
 
-class JobManager(object):
+class UnicoreJobManager(object):
     """
     The job manager class provides methods for managing slurm jobs
     """
@@ -84,6 +78,106 @@ class JobManager(object):
         """
         self._mutex = Lock()
 
+    @classmethod
+    def get_sites(self, registry_url=None, headers={}):
+        """
+        read the base URLs of the available sites from the registry. If the registry_url is None,
+        the HBP registry is used
+        :param registry_url:
+        :param headers:
+        :return: available sites
+        """
+        if registry_url is None:
+            registry_url = _HBP_REGISTRY_URL
+        my_headers = headers.copy()
+        my_headers['Accept'] = "application/json"
+        r = requests.get(registry_url, headers=my_headers, verify=False)
+        if r.status_code != 200:
+            raise RuntimeError("Error accessing registry at %s: %s" % (registry_url, r.status_code))
+        sites = {}
+        for x in r.json()['entries']:
+            try:
+                # just want the "core" URL and the site ID
+                href = x['href']
+                service_type = x['type']
+                if "TargetSystemFactory" == service_type:
+                    base = re.match(r"(https://\S+/rest/core).*", href).group(1)
+                    site_name = re.match(r"https://\S+/(\S+)/rest/core", href).group(1)
+                    sites[site_name] = base
+            except Exception as e:
+                print(e)
+        return sites
+
+    @classmethod
+    def get_site(self, name, headers=[]):
+        """
+        :param name:
+        :param headers:
+        :return:
+        """
+        return self.get_sites(headers=headers).get(name, None)
+
+    @classmethod
+    def get_properties(self, resource, headers={}):
+        """
+        get JSON properties of a resource
+        :param resource:
+        :param headers:
+        :return:
+        """
+        my_headers = headers.copy()
+        my_headers['Accept'] = "application/json"
+        r = requests.get(resource, headers=my_headers, verify=False)
+        if r.status_code != 200:
+            raise RuntimeError("Error getting properties: %s" % r.status_code)
+        else:
+            return r.json()
+
+    @classmethod
+    def get_working_directory(self, job, headers={}, properties=None):
+        """
+        Returns the URL of the working directory resource of a job
+        :param headers: Headers
+        :param properties: Properties
+        :return: Working directory on remote station
+        """
+        if properties is None:
+            properties = self.get_properties(job, headers)
+        return properties['_links']['workingDirectory']['href']
+
+    @classmethod
+    def invoke_action(self, resource, action, headers, data={}):
+        """
+        :param action:
+        :param headers:
+        :param data:
+        :return:
+        """
+        my_headers = headers.copy()
+        my_headers['Content-Type'] = "application/json"
+        action_url = self.get_properties(resource, headers)['_links']['action:' + action]['href']
+        r = requests.post(action_url, data=json.dumps(data), headers=my_headers, verify=False)
+        if r.status_code != 200:
+            raise RuntimeError("Error invoking action: %s" % r.status_code)
+        return r.json()
+
+    @classmethod
+    def upload(self, destination, file_desc, headers):
+        """
+        :param file_desc:
+        :param headers:
+        :return:
+        """
+        my_headers = headers.copy()
+        my_headers['Content-Typqe'] = "application/octet-stream"
+        name = file_desc['To']
+        data = file_desc['Data']
+        # TODO file_desc could refer to local file
+        r = requests.put(destination + "/" + name, data=data, headers=my_headers, verify=False)
+        if r.status_code != 204:
+            raise RuntimeError("Error uploading data: %s" % r.status_code)
+
+    @classmethod
     def schedule(self, session, job_information):
         """
         Allocates a job and starts the rendering resource process. If successful, the session
@@ -98,6 +192,85 @@ class JobManager(object):
             status = self.start(session, job_information)
         return status
 
+    @classmethod
+    def submit(self, url, job, headers, inputs=[]):
+        """
+        Submits a job to the given URL, which can be the ".../jobs" URL or a ".../sites/site_name/"
+        URL. If inputs is not empty, the listed input data files are uploaded to the job's working
+        directory, and a "start" command is sent to the job.
+        """
+        my_headers = headers.copy()
+        my_headers['Content-Type'] = "application/json"
+        if len(inputs) > 0:
+            # make sure UNICORE does not start the job
+            # before we have uploaded data
+            job['haveClientStageIn'] = 'true'
+
+        r = requests.post(url, data=json.dumps(job), headers=my_headers, verify=False)
+        print(r.content)
+        if r.status_code != 201:
+            raise RuntimeError("Error submitting job: %s" % r.status_code)
+        else:
+            jobURL = r.headers['Location']
+
+        # upload input data and explicitly start job
+        if len(inputs) > 0:
+            working_directory = self.get_working_directory(jobURL, headers)
+            for input in inputs:
+                self.upload(working_directory + "/files", input, headers)
+            self.invoke_action(jobURL, "start", headers)
+
+        return jobURL
+
+    @classmethod
+    def is_running(self, job, headers={}):
+        """
+        check status for a job
+        :param job:
+        :param headers:
+        :return:
+        """
+        properties = self.get_properties(job, headers)
+        status = properties['status']
+        return ("SUCCESSFUL" != status) and ("FAILED" != status)
+
+    @classmethod
+    def wait_for_completion(self, job, headers={}, refresh_function=None, refresh_interval=360):
+        """
+        Wait until job is done. If refresh_function is not none, it will be called to refresh the
+        "Authorization" header
+        :param headers:
+        :param refresh_function:
+        :param refresh_interval: refresh interval is seconds
+        :return:
+        """
+        sleep_interval = 10
+        do_refresh = refresh_function is not None
+        # refresh every N iterations
+        refresh = int(1 + refresh_interval / sleep_interval)
+        count = 0
+        while self.is_running(job, headers):
+            import time
+            time.sleep(sleep_interval)
+            count += 1
+            if do_refresh and count == refresh:
+                headers['Authorization'] = refresh_function()
+                count = 0
+
+    @classmethod
+    def get_oidc_auth(self):
+        """ returns HTTP headers containing OIDC bearer token """
+        # hdr = get_bbp_client().task.oauth_client.get_auth_header()
+        from bbp_client.client import get_services
+        from bbp_client.oidc.client import BBPOIDCClient
+        import os
+        services = get_services()
+        oauth_url = services['oidc_service']['prod']['url']
+        user = os.environ['USER']
+        oidc = BBPOIDCClient.implicit_auth(user=user, oauth_url=oauth_url)
+        hdr = oidc.get_auth_header()
+        return {'Authorization': hdr}
+
     def allocate(self, session, job_information):
         """
         Allocates a job according to rendering resource configuration. If the allocation is
@@ -108,48 +281,59 @@ class JobManager(object):
         :return: A Json response containing on ok status or a description of the error
         """
         status = None
-        for cluster_node in global_settings.SLURM_HOSTS:
-            try:
-                self._mutex.acquire()
-                session.status = SESSION_STATUS_SCHEDULING
-                session.cluster_node = cluster_node
-                session.save()
+        auth = self.get_oidc_auth()
+        base_url = self.get_sites(headers=auth)['HBP_JURECA']
+        # get information about the current user, e.g.
+        # role, Unix login and group(s)
+        props = self.get_properties(base_url, auth)
+        if not 'user' == props['client']['role']['selected']:
+            log.error('Account is not registered on the selected site')
+            self.clear_jobs(props, auth)
+        # setup the job - please refer to
+        # http://unicore.eu/documentation/manuals/unicore/files/ucc/ucc-manual.html
+        # for more options
+        job = {}
 
-                log.info(1, 'Scheduling job for session ' + session.id)
+        # Use a shell script, often it is better to setup a server-side 'Application' for a
+        # simulation code and invoke that
+        job['ApplicationName'] = 'test'
+        job['Executable'] = '/bin/date'
+        job['Parameters'] = {'SOURCE': 'input.sh'}
+        # Request resources nodes etc
+        # job['Resources'] = {'Nodes': '1'}
 
-                job_information.cluster_node = cluster_node
-                command_line = self._build_allocation_command(session, job_information)
-                process = subprocess.Popen(
-                    [command_line],
-                    shell=True,
-                    stdin=subprocess.PIPE,
-                    stdout=subprocess.PIPE,
-                    stderr=subprocess.PIPE)
+        # the 'input.sh' script that will be uploaded
+        input_sh_content = '"#!/bin/sh\ndate\nhostname\nwhoami\n"'
 
-                error = process.communicate()[1]
-                if len(re.findall('Granted', error)) != 0:
-                    session.job_id = re.findall('\\d+', error)[0]
-                    log.info(1, 'Allocated job ' + str(session.job_id) +
-                             ' on cluster node ' + cluster_node)
-                    session.status = SESSION_STATUS_SCHEDULED
-                    session.save()
-                    response = json.dumps({'message': 'Job scheduled', 'jobId': session.job_id})
-                    status = [200, response]
-                    break
-                else:
-                    session.status = SESSION_STATUS_FAILED
-                    session.save()
-                    log.error(error)
-                    response = json.dumps({'contents': error})
-                    status = [400, response]
-                process.stdin.close()
-            except OSError as e:
-                log.error(str(e))
-                response = json.dumps({'contents': str(e)})
-                status = [400, response]
-            finally:
-                if self._mutex.locked():
-                    self._mutex.release()
+        # list of files to be uploaded
+        # NOTE files can also be staged-in from remote locations or can be already present on the
+        # HPC filesystem
+        input_sh = {'To': 'input.sh', 'Data': input_sh_content}
+        inputs = [input_sh]
+
+        # Submit the job
+        job_url = self.submit(base_url + "/jobs", job, auth, inputs)
+        log.info(1, 'Job submitted to %s' % job_url)
+
+        # check status
+        log.info(1, self.get_properties(job_url, auth)['status'])
+
+        # list files in job working directory
+        work_dir = self.get_working_directory(job_url, auth)
+        log.info(1, 'Working directory ' + work_dir)
+        log.info(1, self.get_properties(work_dir + "/files", auth)['children'])
+
+        # we can also wait for the job to finish
+        self.wait_for_completion(job_url, auth)
+        log.info(1, self.get_properties(job_url, auth)['status'])
+
+        # list files in job working directory
+        work_dir = self.get_working_directory(job_url, auth)
+        log.info(1, self.get_properties(work_dir + "/files", auth)['children'])
+
+        # download and show stdout
+        log.info(1, self.get_file_content(work_dir + "/files" + "/stdout", auth))
+
         return status
 
     def start(self, session, job_information):
@@ -470,4 +654,4 @@ class JobManager(object):
 
 
 # Global job manager used for all allocations
-globalJobManager = JobManager()
+globalUnicoreJobManager = UnicoreJobManager()
