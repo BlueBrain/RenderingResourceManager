@@ -154,7 +154,6 @@ class RenderingResourceSettingsManager(object):
         :param hostname Rest hostname
         :param port Rest port
         :param schema Rest schema
-        :param job_id Id of job
         """
         response = string_format
         response = response.replace('${job_id}', str(job_id))
