@@ -50,7 +50,7 @@ from rendering_resource_manager_service.session.management import keep_alive_thr
 from rendering_resource_manager_service.config.management import \
     rendering_resource_settings_manager as manager
 import rendering_resource_manager_service.service.settings as global_settings
-import job_manager
+from job_manager import globalJobManager
 import process_manager
 
 
@@ -171,7 +171,7 @@ class SessionManager(object):
                 if session.process_pid != -1:
                     process_manager.ProcessManager.stop(session)
                 if session.job_id is not None and session.job_id != '':
-                    jm = job_manager.JobManager()
+                    jm = globalJobManager()
                     jm.stop(session)
                 session.delete()
                 msg = 'Session successfully destroyed'
@@ -264,10 +264,9 @@ class SessionManager(object):
                 # Failed to contact rendering resource, make sure that the corresponding
                 # job is still allocated
                 log.info(1, str(e))
-                jm = job_manager.JobManager()
                 hostname = ''
                 try:
-                    hostname = jm.hostname(session)
+                    hostname = globalJobManager.hostname(session)
                 except AttributeError as e:
                     log.error(str(e))
 
@@ -302,6 +301,32 @@ class SessionManager(object):
         })]
 
     @staticmethod
+    def status_as_string(status):
+        """
+        :param status:
+        :return:
+        """
+        # pylint: disable=R0911
+        if status == SESSION_STATUS_STOPPED:
+            return 'Stopped'
+        elif status == SESSION_STATUS_SCHEDULING:
+            return 'Scheduling'
+        elif status == SESSION_STATUS_SCHEDULED:
+            return 'Scheduled'
+        elif status == SESSION_STATUS_GETTING_HOSTNAME:
+            return 'Getting hostname'
+        elif status == SESSION_STATUS_STARTING:
+            return 'Running'
+        elif status == SESSION_STATUS_RUNNING:
+            return 'Running'
+        elif status == SESSION_STATUS_STOPPING:
+            return 'Stopping'
+        elif status == SESSION_STATUS_FAILED:
+            return 'Failed'
+        elif status == SESSION_STATUS_BUSY:
+            return 'Busy'
+
+    @staticmethod
     def query_status(session_id):
         """
         Queries the session status and updates it accordingly
@@ -320,7 +345,8 @@ class SessionManager(object):
             status_description = 'Undefined'
             session_status = session.status
 
-            log.info(1, 'Current session status is: ' + str(session_status))
+            log.info(1, 'Current session status is: ' +
+                     SessionManager.status_as_string(session_status))
 
             if session_status == SESSION_STATUS_SCHEDULING:
                 status_description = str(session.renderer_id + ' is scheduled')
@@ -454,3 +480,18 @@ class SessionManager(object):
         """
         log.debug(1, 'Getting cookie from request')
         return request.QUERY_PARAMS[consts.REQUEST_PARAMETER_SESSIONID]
+
+    @staticmethod
+    def get_authentication_token_from_request(request):
+        """
+        Utility function that returns the authentication token from a given HTTP request
+        :return: the authentication token
+        """
+        log.debug(1, 'Getting authentication token from request')
+        try:
+            auth_token = 'Bearer ' + request.META[consts.REQUEST_HEADER_AUTHORIZATION]
+            log.info(1, 'Authentication token: ' + auth_token)
+            return auth_token
+        except KeyError:
+            log.error('No authentication token provided')
+            return None

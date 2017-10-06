@@ -279,6 +279,11 @@ class CommandViewSet(viewsets.ModelViewSet):
             log.debug(1, str(traceback.format_exc(e)))
             response = json.dumps({'contents': 'Session does not exist'})
             return HttpResponse(status=404, content=response)
+        except RuntimeError as e:
+            msg = traceback.format_exc(e)
+            log.error(str(msg))
+            response = json.dumps({'contents': str(msg)})
+            return HttpResponse(status=401, content=response)
         except Exception as e:
             msg = traceback.format_exc(e)
             log.error(str(msg))
@@ -305,6 +310,8 @@ class CommandViewSet(viewsets.ModelViewSet):
         job_information.memory = body.get('memory', 0)
         job_information.exclusive_allocation = body.get('exclusive', False)
         job_information.allocation_time = body.get('allocation_time', settings.SLURM_DEFAULT_TIME)
+        sm = session_manager.SessionManager()
+        job_information.auth_token = sm.get_authentication_token_from_request(request)
         session.http_host = ''
         session.http_port = consts.DEFAULT_RENDERER_HTTP_PORT + random.randint(0, 1000)
         status = job_manager.globalJobManager.schedule(session, job_information)
