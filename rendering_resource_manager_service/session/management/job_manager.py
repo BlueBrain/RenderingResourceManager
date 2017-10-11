@@ -62,7 +62,7 @@ class JobInformation(object):
 
 # Global job manager used for all allocations
 globalJobManager = None
-if global_settings.JOB_ALLOCATOR == global_settings.JOB_ALLOCATOR_SLURM:
+if global_settings.RESOURCE_ALLOCATOR == global_settings.RESOURCE_ALLOCATOR_SLURM:
     globalJobManager = slurm_job_manager.SlurmJobManager()
-elif global_settings.JOB_ALLOCATOR == global_settings.JOB_ALLOCATOR_UNICORE:
+elif global_settings.RESOURCE_ALLOCATOR == global_settings.RESOURCE_ALLOCATOR_UNICORE:
     globalJobManager = unicore_job_manager.UnicoreJobManager()

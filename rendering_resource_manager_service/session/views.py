@@ -46,7 +46,7 @@ from rendering_resource_manager_service.session.management import process_manage
 from rendering_resource_manager_service.session.management import image_feed_manager
 import management.session_manager as session_manager
 from rendering_resource_manager_service.session.models import \
-    SESSION_STATUS_GETTING_HOSTNAME, SESSION_STATUS_SCHEDULED
+    SESSION_STATUS_GETTING_HOSTNAME, SESSION_STATUS_SCHEDULED, SESSION_STATUS_STARTING
 
 
 class SessionSerializer(serializers.ModelSerializer):
@@ -371,8 +371,9 @@ class CommandViewSet(viewsets.ModelViewSet):
             if hostname == '':
                 msg = 'Job scheduled but ' + session.renderer_id + ' is not yet running'
                 log.error(msg)
-                session.status = SESSION_STATUS_SCHEDULED
-                session.save()
+                if session.status != SESSION_STATUS_STARTING:
+                    session.status = SESSION_STATUS_SCHEDULED
+                    session.save()
                 response = json.dumps({'contents': str(msg)})
                 return [200, response]
             elif hostname == 'FAILED':

@@ -30,20 +30,17 @@ The Unicore job manager is in charge of managing Unicore jobs.
 """
 
 import requests
-import traceback
 from threading import Lock
 import json
 import re
 
-import rendering_resource_manager_service.session.management.session_manager_settings as settings
 from rendering_resource_manager_service.config.management import \
     rendering_resource_settings_manager as manager
 import rendering_resource_manager_service.utils.custom_logging as log
 from rendering_resource_manager_service.session.models import \
-    SESSION_STATUS_STARTING, SESSION_STATUS_RUNNING, SESSION_STATUS_GETTING_HOSTNAME, \
+    SESSION_STATUS_STARTING, SESSION_STATUS_RUNNING, \
     SESSION_STATUS_STOPPING, SESSION_STATUS_SCHEDULED
 import rendering_resource_manager_service.service.settings as global_settings
-import copy
 
 
 class UnicoreJobManager(object):
@@ -60,6 +57,27 @@ class UnicoreJobManager(object):
         self._auth_token = None # Must be moved to session
         self._registry_url = None
         self._work_dir = None # Must be moved to session
+        self._http_proxies = global_settings.UNICORE_DEFAULT_HTTP_PROXIES
+
+    def _get_json_headers(self):
+        """
+        :return: headers with authorization and content-type
+        """
+        headers = dict()
+        headers['Authorization'] = self._auth_token
+        headers['Content-type'] = "application/json"
+        headers['Accept'] = "application/json"
+        return headers
+
+    def _get_octet_stream_headers(self):
+        """
+        :return: headers with authorization and content-type
+        """
+        headers = dict()
+        headers['Authorization'] = self._auth_token
+        headers['Content-type'] = "application/octet-stream"
+        headers['Accept'] = "application/octet-stream"
+        return headers
 
     def get_sites(self):
         """
@@ -67,11 +85,9 @@ class UnicoreJobManager(object):
         the HBP registry is used
         :return: available sites
         """
-        my_headers = dict()
-        my_headers['Authorization'] = self._auth_token
-        my_headers['Accept'] = "application/json"
         registry_url = global_settings.UNICORE_DEFAULT_REGISTRY_URL
-        r = requests.get(registry_url, headers=my_headers, verify=False)
+        r = requests.get(registry_url, proxies=self._http_proxies,
+                         headers=self._get_json_headers(), verify=False)
         if r.status_code != 200:
             raise RuntimeError("Error accessing registry at %s: [%s] %s" %
                                (registry_url, r.status_code, r.reason))
@@ -101,10 +117,8 @@ class UnicoreJobManager(object):
         :param resource:
         :return:
         """
-        my_headers = dict()
-        my_headers['Authorization'] = self._auth_token
-        my_headers['Accept'] = 'application/json'
-        r = requests.get(resource, headers=my_headers, verify=False)
+        r = requests.get(resource, proxies=self._http_proxies,
+                         headers=self._get_json_headers(), verify=False)
         if r.status_code != 200:
             raise RuntimeError("Error getting properties: %s" % r.status_code)
         else:
@@ -128,12 +142,9 @@ class UnicoreJobManager(object):
         :param data:
         :return:
         """
-        my_headers = dict()
-        my_headers['Accept'] = 'application/json'
-        my_headers['Content-Type'] = 'application/json'
-        my_headers['Authorization'] = self._auth_token
         action_url = self.get_properties(job_url)['_links']['action:' + action]['href']
-        r = requests.post(action_url, data=json.dumps(data), headers=my_headers, verify=False)
+        r = requests.post(action_url, proxies=self._http_proxies, data=json.dumps(data),
+                          headers=self._get_json_headers(), verify=False)
         if r.status_code != 200:
             log.error(r.content)
             raise RuntimeError("Error invoking action: %s" % r.status_code)
@@ -145,13 +156,11 @@ class UnicoreJobManager(object):
         :param file_desc:
         :return:
         """
-        my_headers = dict()
-        my_headers['Authorization'] = self._auth_token
-        my_headers['Content-Type'] = 'application/octet-stream'
         name = file_desc['To']
         data = file_desc['Data']
         # TODO file_desc could refer to local file
-        r = requests.put(destination + "/" + name, data=data, headers=my_headers, verify=False)
+        r = requests.put(destination + "/" + name, proxies=self._http_proxies, data=data,
+                         headers=self._get_octet_stream_headers(), verify=False)
         if r.status_code != 204:
             raise RuntimeError("Error uploading data: %s" % r.status_code)
 
@@ -168,29 +177,19 @@ class UnicoreJobManager(object):
 
     def get_jobs(self, properties):
         """ get JSON properties of a resource """
-        my_headers = dict()
-        my_headers['Accept'] = 'application/json'
-        my_headers['Content-Type'] = 'application/json'
-        my_headers['Authorization'] = self._auth_token
         url = properties['_links']['jobs']['href']
-        r = requests.get(url, headers=my_headers, verify=False)
+        r = requests.get(url, proxies=self._http_proxies,
+                         headers=self._get_json_headers(), verify=False)
         if r.status_code != 200:
             raise RuntimeError("Error getting jobs: %s" % r.status_code)
         return r.json()
 
     def clear_jobs(self, properties):
         """ Clear all job placeholders a resource """
-        my_headers = dict()
-        my_headers['Accept'] = 'application/json'
-        my_headers['Content-Type'] = 'application/json'
-        my_headers['Authorization'] = self._auth_token
         jobs = self.get_jobs(properties)["jobs"]
         for job in jobs:
-            my_headers = dict()
-            my_headers['Accept'] = 'application/json'
-            my_headers['Content-Type'] = 'application/json'
-            my_headers['Authorization'] = self._auth_token
-            r = requests.delete(job, headers=my_headers, verify=False)
+            r = requests.delete(job, proxies=self._http_proxies,
+                                headers=self._get_json_headers(), verify=False)
             if r.status_code != 200 and r.status_code != 204:
                 raise RuntimeError(
                     "Error deleting jobs %s: %s" % (job, r.status_code))
@@ -201,16 +200,13 @@ class UnicoreJobManager(object):
         URL. If inputs is not empty, the listed input data files are uploaded to the job's working
         directory, and a "start" command is sent to the job.
         """
-        my_headers = dict()
-        my_headers['Accept'] = 'application/json'
-        my_headers['Content-Type'] = 'application/json'
-        my_headers['Authorization'] = self._auth_token
         # make sure UNICORE does not start the job before we have uploaded data
         job_information.job['haveClientStageIn'] = 'true'
 
         r = requests.post(self._registry_url + '/jobs',
+                          proxies=self._http_proxies,
                           data=json.dumps(job_information.job),
-                          headers=my_headers, verify=False)
+                          headers=self._get_json_headers(), verify=False)
         log.info(1, r.content)
         if r.status_code != 201:
             obj = json.loads(r.content)
@@ -218,8 +214,8 @@ class UnicoreJobManager(object):
         else:
             session.job_id = r.headers['Location']
 
-        r = requests.get(session.job_id,
-                         headers=my_headers, verify=False)
+        r = requests.get(session.job_id, proxies=self._http_proxies,
+                         headers=self._get_json_headers(), verify=False)
         body = json.loads(r.content)
         session.job_id = body['_links']['self']['href']
         self._work_dir = body['_links']['workingDirectory']['href']
@@ -266,7 +262,8 @@ class UnicoreJobManager(object):
             # job_information.job['Executable'] = '/usr/bash'
             job_information.job['Parameters'] = {'SOURCE': 'input.sh'}
             # Request resources nodes etc
-            job_information.job['Resources'] = {'Nodes': job_information.nb_nodes}
+            #job_information.job['Resources'] = {'Nodes': job_information.nb_nodes}
+            job_information.job['Resources'] = {'Nodes': 1}
 
             # Submit the job
             self.submit(session, job_information)
@@ -306,12 +303,15 @@ class UnicoreJobManager(object):
 
         # Modules
         full_command = '"#!/bin/sh\n'
-        full_command = full_command + 'echo HOSTNAME=$HOSTNAME\n'
-        full_command = full_command + 'module purge\n'
+        full_command = full_command + 'HOSTNAME=$HOSTNAME\n'
+        full_command = full_command + 'unset LD_LIBRARY_PATH\n'
+        full_command = full_command + 'export LD_LIBRARY_PATH=/global/opt/slurm/default/lib64/\n'
+        full_command = full_command + 'module use /gpfs/work/pcp0/pcp0085/x64/modulefiles\n'
+
         if rr_settings.modules is not None:
             values = rr_settings.modules.split()
-            for module in values:
-                full_command += 'module load ' + module.strip() + '\n'
+            for module_name in values:
+                full_command += 'module load ' + module_name.strip() + '\n'
 
         # Environment variables
         if rr_settings.environment_variables is not None:
@@ -346,8 +346,8 @@ class UnicoreJobManager(object):
         """
         try:
             self._mutex.acquire()
-            session.status = SESSION_STATUS_STARTING
-            session.save()
+            # session.status = SESSION_STATUS_STARTING
+            # session.save()
 
             self.invoke_action(session.job_id, "start")
 
@@ -355,7 +355,7 @@ class UnicoreJobManager(object):
                 manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
             if not rr_settings.wait_until_running:
                 session.status = SESSION_STATUS_RUNNING
-            session.save()
+                session.save()
             response = json.dumps({'message': session.renderer_id + ' successfully started'})
             return [200, response]
         except RuntimeError as e:
@@ -383,16 +383,16 @@ class UnicoreJobManager(object):
             session.status = SESSION_STATUS_STOPPING
             session.save()
 
-            my_headers = dict()
-            my_headers['Accept'] = 'application/json'
-            my_headers['Content-Type'] = 'application/json'
-            my_headers['Authorization'] = self._auth_token
             # make sure UNICORE does not start the job before we have uploaded data
-            r = requests.delete(session.job_id, headers=my_headers, verify=False)
+            r = requests.delete(session.job_id, proxies=self._http_proxies,
+                                headers=self._get_json_headers(), verify=False)
             log.info(1, r.content)
-            if r.status_code != 200:
-                obj = json.loads(r.content)
-                raise RuntimeError('Error deleting job: ' + r.content['errorMessage'])
+            if r.status_code != 204:
+                message = str(r.status_code)
+                if r.content != '':
+                    obj = json.loads(r.content)
+                    message = obj['errorMessage']
+                raise RuntimeError('Error deleting job: ' + message)
         finally:
             if self._mutex.locked():
                 self._mutex.release()
@@ -425,13 +425,35 @@ class UnicoreJobManager(object):
         :param session: Current user session
         :return: The hostname of the host if the job is running, empty otherwise
         """
-        if session.job_id != '':
-            log_file = self._get_file_content(self._work_dir + '/files/stdout')
-            if log_file is not None:
-                value = re.search(r'HOSTNAME=(\w+)', log_file).group(1)
-                log.info('HOSTNAME=' + str(value))
+        value = ''
+        r = requests.get(session.job_id, proxies=self._http_proxies,
+                         headers=self._get_json_headers(), verify=False)
+        try:
+            if r.content == '':
                 return value
-        return ''
+            obj = json.loads(r.content)
+            log.info(1, str(obj))
+            status = obj['status']
+            log.info(1, 'Unicore job status is ' + str(status))
+            if status == 'READY':
+                self.start(session, None)
+            elif status == 'SUCCESSFUL' or status == 'FAILED':
+                self.stop(session)
+            else:
+                # CHANGE TO STDOUT when Brayns is deployed
+                log_file = self._get_file_content(self._work_dir + '/files/stderr')
+                if log_file is not None:
+                    try:
+                        log.info(1, 'Log: ' + log_file)
+                        value = re.search(r'HOSTNAME=(\w+)', log_file).group(1)
+                        log.info(1, 'HOSTNAME=' + str(value))
+                        session.status = SESSION_STATUS_STARTING
+                        session.save()
+                    except AttributeError as e:
+                        value = ''
+        except KeyError as e:
+            log.error(e)
+        return value
 
     def job_information(self, session):
         """
@@ -466,15 +488,13 @@ class UnicoreJobManager(object):
         :return:
         """
         try:
-            log.info(1, 'Getting file content from ' + file_url)
+            log.info(2, 'Getting file content from ' + file_url)
             if check_size_limit:
                 size = self.get_properties(file_url)['size']
                 if size > max_size:
                     raise RuntimeError("File size too large!")
-            my_headers = []
-            my_headers['Authorization'] = self._auth_token
-            my_headers['Accept'] = "application/octet-stream"
-            r = requests.get(file_url, headers=my_headers, verify=False)
+            r = requests.get(file_url, proxies=self._http_proxies,
+                             headers=self._get_octet_stream_headers(), verify=False)
             if r.status_code == 200:
                 return r.content
         except RuntimeError as e:
