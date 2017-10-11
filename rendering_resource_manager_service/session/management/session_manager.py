@@ -351,7 +351,7 @@ class SessionManager(object):
             if session_status == SESSION_STATUS_SCHEDULING:
                 status_description = str(session.renderer_id + ' is scheduled')
             elif session_status == SESSION_STATUS_SCHEDULED or \
-               session_status == SESSION_STATUS_GETTING_HOSTNAME:
+                            session_status == SESSION_STATUS_GETTING_HOSTNAME:
                 if session.http_host != '':
                     status_description = session.renderer_id + ' is starting'
                     log.info(1, status_description)
@@ -491,6 +491,8 @@ class SessionManager(object):
         try:
             auth_token = 'Bearer ' + request.META[consts.REQUEST_HEADER_AUTHORIZATION]
             log.info(1, 'Authentication token: ' + auth_token)
+            #auth_token = 'Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImJicC1vaWRjIn0.eyJleHAiOjE1MDc3Mzc0MTIsInN1YiI6IjMwMjUwNSIsImF1ZCI6WyJjMjkyMDMxYy1jOTFmLTQzZmEtYjFhOS03MmU2NWViMThlNDQiXSwiaXNzIjoiaHR0cHM6XC9cL3NlcnZpY2VzLmh1bWFuYnJhaW5wcm9qZWN0LmV1XC9vaWRjXC8iLCJqdGkiOiI0NGZmN2FmZS1lMmEzLTQxNzUtODAyYS05M2NiMTQ5ODJhM2QiLCJpYXQiOjE1MDc3MjMwMTIsImhicF9rZXkiOiI1OWM5NjE5MTFjNWViMWUyMTYxZDYwNDEyZTExNmVjNWM0NGNkMDUwIn0.gymUlgU1kHcfSEP-_7kwF0XNBh_5qdtGFGhfquk_AuOlePnqE0BmU_22EkkbwXJ3Rs8eZOCUGGyCGIjoPJNYSSU2SLKvO0RY-A_GkQb9LPaIMFyaTvGtdlM-Y6eQcjm4IIHdY_cJGeqKYkr6eGgD1caLhQJAO21JJt_Esa1n3pE'
+            #auth_token = 'Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6ImJicC1vaWRjIn0.eyJleHAiOjE1MDc3NTUzMzEsInN1YiI6IjE3NjYyMiIsImF1ZCI6WyI1NjA0YWYxYy0xZTA3LTQ4MWQtOGIxMy03ODVlYTQ0MDE0YzUiXSwiaXNzIjoiaHR0cHM6XC9cL3NlcnZpY2VzLmh1bWFuYnJhaW5wcm9qZWN0LmV1XC9vaWRjXC8iLCJqdGkiOiJhYmMxMGRjZC1jZTAzLTQyMTktYjI1OC1iNzk2MzA5NzQ0MDMiLCJpYXQiOjE1MDc3NDA5MzEsImhicF9rZXkiOiIzY2EwZWMzMjQwMjAzOWVlMjJhNTdmMDc2Yzg3NGZhZGQ1YjM0NDM0In0.XMZqNFAU7cbirnV_acMa9kBZ4otTo2tW1qwsEQmPsx2-v5Dqo0ocehjHodwLNwkNoZt30wFxrgdabs6R0SLrrSWPrdNRbhrsQqUbmmvOgHsHtkLIy3CbK-Rbk2amymB2yslgfjH5_IS9M0Biu218hWOlGGSannqmB4H58XujlQA'
             return auth_token
         except KeyError:
             log.error('No authentication token provided')

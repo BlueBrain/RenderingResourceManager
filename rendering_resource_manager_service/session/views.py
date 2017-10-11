@@ -242,7 +242,7 @@ class CommandViewSet(viewsets.ModelViewSet):
         # pylint: disable=R0912
         try:
             session_id = session_manager.SessionManager().get_session_id_from_request(request)
-            log.debug(1, 'Processing command <' + command + '> for session ' + str(session_id))
+            log.info(2, 'Processing command <' + command + '> for session ' + str(session_id))
             session = Session.objects.get(id=session_id)
             response = None
             if command == 'schedule':
@@ -311,10 +311,10 @@ class CommandViewSet(viewsets.ModelViewSet):
         job_information.exclusive_allocation = body.get('exclusive', False)
         job_information.allocation_time = body.get('allocation_time', settings.SLURM_DEFAULT_TIME)
         sm = session_manager.SessionManager()
-        job_information.auth_token = sm.get_authentication_token_from_request(request)
+        auth_token = sm.get_authentication_token_from_request(request)
         session.http_host = ''
         session.http_port = consts.DEFAULT_RENDERER_HTTP_PORT + random.randint(0, 1000)
-        status = job_manager.globalJobManager.schedule(session, job_information)
+        status = job_manager.globalJobManager.schedule(session, job_information, auth_token)
         return HttpResponse(status=status[0], content=status[1])
 
     @classmethod
@@ -361,7 +361,7 @@ class CommandViewSet(viewsets.ModelViewSet):
         to populate it if null
         :param : session: Session holding the rendering resource
         """
-        log.info(1, 'Verifying hostname ' + session.http_host + ' for session ' + str(session.id))
+        log.info(2, 'Verifying hostname ' + session.http_host + ' for session ' + str(session.id))
         if not session.status == SESSION_STATUS_GETTING_HOSTNAME and \
                 session.job_id and session.http_host == '':
             session.status = SESSION_STATUS_GETTING_HOSTNAME
@@ -374,7 +374,7 @@ class CommandViewSet(viewsets.ModelViewSet):
                 session.status = SESSION_STATUS_SCHEDULED
                 session.save()
                 response = json.dumps({'contents': str(msg)})
-                return [404, response]
+                return [200, response]
             elif hostname == 'FAILED':
                 sm = session_manager.SessionManager()
                 sm.delete_session(session.id)

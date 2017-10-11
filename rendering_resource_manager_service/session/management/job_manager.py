@@ -57,8 +57,7 @@ class JobInformation(object):
         self.memory = 0
         self.queue = ''
         self.allocation_time = ''
-        self.auth_token = None
-        self.work_dir = None
+        # self.work_dir = None
         self.job = None
 
 # Global job manager used for all allocations

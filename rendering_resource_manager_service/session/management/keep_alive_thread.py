@@ -42,7 +42,7 @@ import process_manager
 KEEP_ALIVE_TIMEOUT = 300
 
 # Frequency at which the keep-alive messages are checked
-KEEP_ALIVE_FREQUENCY = 10
+KEEP_ALIVE_FREQUENCY = 120
 
 
 class KeepAliveThread(threading.Thread):

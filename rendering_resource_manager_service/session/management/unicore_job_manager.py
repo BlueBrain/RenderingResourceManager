@@ -40,8 +40,10 @@ from rendering_resource_manager_service.config.management import \
     rendering_resource_settings_manager as manager
 import rendering_resource_manager_service.utils.custom_logging as log
 from rendering_resource_manager_service.session.models import \
-    SESSION_STATUS_STARTING, SESSION_STATUS_RUNNING
+    SESSION_STATUS_STARTING, SESSION_STATUS_RUNNING, SESSION_STATUS_GETTING_HOSTNAME, \
+    SESSION_STATUS_STOPPING, SESSION_STATUS_SCHEDULED
 import rendering_resource_manager_service.service.settings as global_settings
+import copy
 
 
 class UnicoreJobManager(object):
@@ -55,24 +57,24 @@ class UnicoreJobManager(object):
         """
         self._mutex = Lock()
         self._base_url = None
+        self._auth_token = None # Must be moved to session
+        self._registry_url = None
+        self._work_dir = None # Must be moved to session
 
-    @staticmethod
-    def get_sites(registry_url=None, headers={}):
+    def get_sites(self):
         """
         read the base URLs of the available sites from the registry. If the registry_url is None,
         the HBP registry is used
-        :param registry_url:
-        :param headers:
         :return: available sites
         """
-        if registry_url is None:
-            registry_url = global_settings.UNICORE_DEFAULT_REGISTRY_URL
-        import copy
-        my_headers = copy.deepcopy(headers)
+        my_headers = dict()
+        my_headers['Authorization'] = self._auth_token
         my_headers['Accept'] = "application/json"
+        registry_url = global_settings.UNICORE_DEFAULT_REGISTRY_URL
         r = requests.get(registry_url, headers=my_headers, verify=False)
         if r.status_code != 200:
-            raise RuntimeError("Error accessing registry at %s: %s" % (registry_url, r.status_code))
+            raise RuntimeError("Error accessing registry at %s: [%s] %s" %
+                               (registry_url, r.status_code, r.reason))
         sites = {}
         for x in r.json()['entries']:
             # just want the "core" URL and the site ID
@@ -85,68 +87,67 @@ class UnicoreJobManager(object):
         log.info(1, 'Sites: ' + str(sites))
         return sites
 
-    def get_site(self, name, headers=[]):
+    def get_site(self, name):
         """
         :param name:
         :param headers:
         :return:
         """
-        return self.get_sites(headers=headers).get(name, None)
+        return self.get_sites().get(name, None)
 
-    @staticmethod
-    def get_properties(resource, headers={}):
+    def get_properties(self, resource):
         """
         get JSON properties of a resource
         :param resource:
-        :param headers:
         :return:
         """
-        my_headers = headers.copy()
-        my_headers['Accept'] = "application/json"
+        my_headers = dict()
+        my_headers['Authorization'] = self._auth_token
+        my_headers['Accept'] = 'application/json'
         r = requests.get(resource, headers=my_headers, verify=False)
         if r.status_code != 200:
             raise RuntimeError("Error getting properties: %s" % r.status_code)
         else:
             return r.json()
 
-    def get_working_directory(self, job, headers={}, properties=None):
+    def get_working_directory(self, job, properties=None):
         """
         Returns the URL of the working directory resource of a job
         :param job: Job
-        :param headers: Headers
         :param properties: Properties
         :return: Working directory on remote station
         """
         if properties is None:
-            properties = self.get_properties(job, headers)
+            properties = self.get_properties(job)
         return properties['_links']['workingDirectory']['href']
 
-    def invoke_action(self, resource, action, headers, data={}):
+    def invoke_action(self, job_url, action, data={}):
         """
         :param resource:
         :param action:
-        :param headers:
         :param data:
         :return:
         """
-        my_headers = headers.copy()
-        my_headers['Content-Type'] = "application/json"
-        action_url = self.get_properties(resource, headers)['_links']['action:' + action]['href']
+        my_headers = dict()
+        my_headers['Accept'] = 'application/json'
+        my_headers['Content-Type'] = 'application/json'
+        my_headers['Authorization'] = self._auth_token
+        action_url = self.get_properties(job_url)['_links']['action:' + action]['href']
         r = requests.post(action_url, data=json.dumps(data), headers=my_headers, verify=False)
         if r.status_code != 200:
+            log.error(r.content)
             raise RuntimeError("Error invoking action: %s" % r.status_code)
         return r.json()
 
-    @staticmethod
-    def upload(destination, file_desc, headers):
+    def upload(self, destination, file_desc):
         """
         :param destination:
         :param file_desc:
-        :param headers:
         :return:
         """
-        my_headers = headers.copy()
-        my_headers['Content-Typqe'] = "application/octet-stream"
+        my_headers = dict()
+        my_headers['Authorization'] = self._auth_token
+        my_headers['Content-Type'] = 'application/octet-stream'
         name = file_desc['To']
         data = file_desc['Data']
         # TODO file_desc could refer to local file
@@ -154,101 +155,87 @@ class UnicoreJobManager(object):
         if r.status_code != 204:
             raise RuntimeError("Error uploading data: %s" % r.status_code)
 
-    def schedule(self, session, job_information):
-        """
-        Allocates a job and starts the rendering resource process. If successful, the session
-        job_id is populated and the session status is set to SESSION_STATUS_STARTING
-        :param session: Current user session
-        :param job_information: Information about the job
-        :return: A Json response containing on ok status or a description of the error
-        """
-        self.allocate(session, job_information)
-        if job_information.job is not None:
-            status = self.start(session, job_information)
-        return status
-
-    def submit(self, url, job_information, auth_token, inputs={}):
-        """
-        Submits a job to the given URL, which can be the ".../jobs" URL or a ".../sites/site_name/"
-        URL. If inputs is not empty, the listed input data files are uploaded to the job's working
-        directory, and a "start" command is sent to the job.
-        """
-        headers = dict()
-        headers['Content-Type'] = 'application/json'
-        headers['authorization'] = auth_token
-        if len(inputs) > 0:
-            # make sure UNICORE does not start the job
-            # before we have uploaded data
-            job_information.job['haveClientStageIn'] = 'true'
-
-        r = requests.post(url, data=json.dumps(job_information.job), headers=headers, verify=False)
-        if r.status_code != 200:
-            obj = json.loads(r.content)
-            raise RuntimeError('Error submitting job: ' + obj['errorMessage'])
-        else:
-            job_information.http_host = r.headers['Location']
-
-        # upload input data and explicitly start job
-        if len(inputs) > 0:
-            working_directory = self.get_working_directory(job_information.http_host, headers)
-            for input_file in inputs:
-                self.upload(working_directory + "/files", input_file, headers)
-            self.invoke_action(job_information.http_host, "start", headers)
-
-    def is_running(self, job, headers={}):
+    def is_running(self, job):
         """
         check status for a job
         :param job:
         :param headers:
         :return:
         """
-        properties = self.get_properties(job, headers)
+        properties = self.get_properties(job)
         status = properties['status']
         return ("SUCCESSFUL" != status) and ("FAILED" != status)
 
-    def wait_for_completion(self, job, headers={}, refresh_function=None, refresh_interval=360):
-        """
-        Wait until job is done. If refresh_function is not none, it will be called to refresh the
-        "Authorization" header
-        :param headers:
-        :param refresh_function:
-        :param refresh_interval: refresh interval is seconds
-        :return:
-        """
-        sleep_interval = 10
-        do_refresh = refresh_function is not None
-        # refresh every N iterations
-        refresh = int(1 + refresh_interval / sleep_interval)
-        count = 0
-        while self.is_running(job, headers):
-            import time
-            time.sleep(sleep_interval)
-            count += 1
-            if do_refresh and count == refresh:
-                headers['Authorization'] = refresh_function()
-                count = 0
-
-    @staticmethod
-    def get_jobs(properties, headers={}):
+    def get_jobs(self, properties):
         """ get JSON properties of a resource """
-        my_headers = headers.copy()
-        my_headers['Accept'] = "application/json"
+        my_headers = dict()
+        my_headers['Accept'] = 'application/json'
+        my_headers['Content-Type'] = 'application/json'
+        my_headers['Authorization'] = self._auth_token
         url = properties['_links']['jobs']['href']
         r = requests.get(url, headers=my_headers, verify=False)
         if r.status_code != 200:
             raise RuntimeError("Error getting jobs: %s" % r.status_code)
         return r.json()
 
-    def clear_jobs(self, properties, headers={}):
+    def clear_jobs(self, properties):
         """ Clear all job placeholders a resource """
-        jobs = self.get_jobs(properties, headers)["jobs"]
+        my_headers = dict()
+        my_headers['Accept'] = 'application/json'
+        my_headers['Content-Type'] = 'application/json'
+        my_headers['Authorization'] = self._auth_token
+        jobs = self.get_jobs(properties)["jobs"]
         for job in jobs:
-            my_headers = headers.copy()
-            my_headers['Accept'] = "application/json"
+            my_headers = dict()
+            my_headers['Accept'] = 'application/json'
+            my_headers['Content-Type'] = 'application/json'
+            my_headers['Authorization'] = self._auth_token
             r = requests.delete(job, headers=my_headers, verify=False)
             if r.status_code != 200 and r.status_code != 204:
                 raise RuntimeError(
                     "Error deleting jobs %s: %s" % (job, r.status_code))
+
+    def submit(self, session, job_information):
+        """
+        Submits a job to the given URL, which can be the ".../jobs" URL or a ".../sites/site_name/"
+        URL. If inputs is not empty, the listed input data files are uploaded to the job's working
+        directory, and a "start" command is sent to the job.
+        """
+        my_headers = dict()
+        my_headers['Accept'] = 'application/json'
+        my_headers['Content-Type'] = 'application/json'
+        my_headers['Authorization'] = self._auth_token
+        # make sure UNICORE does not start the job before we have uploaded data
+        job_information.job['haveClientStageIn'] = 'true'
+
+        r = requests.post(self._registry_url + '/jobs',
+                          data=json.dumps(job_information.job),
+                          headers=my_headers, verify=False)
+        log.info(1, r.content)
+        if r.status_code != 201:
+            obj = json.loads(r.content)
+            raise RuntimeError('Error submitting job: ' + obj['errorMessage'])
+        else:
+            session.job_id = r.headers['Location']
+
+        r = requests.get(session.job_id,
+                         headers=my_headers, verify=False)
+        body = json.loads(r.content)
+        session.job_id = body['_links']['self']['href']
+        self._work_dir = body['_links']['workingDirectory']['href']
+
+        # Build command line
+        input_sh_content = \
+            self._build_start_command_line(session, job_information)
+        inputs = [
+            {'To': 'input.sh',
+             'Data': input_sh_content}
+        ]
+
+        # upload input data and explicitly start job
+        for input_file in inputs:
+            self.upload(self._work_dir + "/files", input_file)
+        log.info(1, r.content)
 
     def allocate(self, session, job_information):
         """
@@ -259,26 +246,53 @@ class UnicoreJobManager(object):
         :param job_information: Information about the job
         :return: A Json response containing on ok status or a description of the error
         """
-        auth = {'Authorization': job_information.auth_token}
-        session.http_host = self.get_sites(headers=auth)[global_settings.UNICORE_DEFAULT_SITE]
-        # get information about the current user, e.g.
-        # role, Unix login and group(s)
-        props = self.get_properties(session.http_host, auth)
-        if not 'user' == props['client']['role']['selected']:
-            log.error('Account is not registered on the selected site')
-            self.clear_jobs(props, auth)
-        # setup the job - please refer to
-        # http://unicore.eu/documentation/manuals/unicore/files/ucc/ucc-manual.html
-        # for more options
-        job_information.job = dict()
+        try:
+            self._mutex.acquire()
+            self._registry_url = self.get_sites()[global_settings.UNICORE_DEFAULT_SITE]
+            # get information about the current user, e.g.
+            # role, Unix login and group(s)
+            props = self.get_properties(self._registry_url)
+            # if not 'user' == props['client']['role']['selected']:
+            #     log.error('Account is not registered on the selected site')
+            self.clear_jobs(props)
+            # setup the job - please refer to
+            # http://unicore.eu/documentation/manuals/unicore/files/ucc/ucc-manual.html
+            # for more options
+            job_information.job = dict()
 
-        # Use a shell script, often it is better to setup a server-side 'Application' for a
-        # simulation code and invoke that
-        job_information.job['ApplicationName'] = 'test'
-        job_information.job['Executable'] = '/bin/date'
-        job_information.job['Parameters'] = {'SOURCE': 'resource.sh'}
-        # Request resources nodes etc
-        job_information.job['Resources'] = {'Nodes': job_information.nb_nodes}
+            # Use a shell script, often it is better to setup a server-side 'Application' for a
+            # simulation code and invoke that
+            job_information.job['ApplicationName'] = 'Bash shell'
+            # job_information.job['Executable'] = '/usr/bash'
+            job_information.job['Parameters'] = {'SOURCE': 'input.sh'}
+            # Request resources nodes etc
+            job_information.job['Resources'] = {'Nodes': job_information.nb_nodes}
+
+            # Submit the job
+            self.submit(session, job_information)
+            session.status = SESSION_STATUS_SCHEDULED
+            session.save()
+            response = 'Job submitted to %s' % session.job_id
+            log.info(1, response)
+            return [200, response]
+        except RuntimeError as e:
+            log.info(1, e)
+            return [403, str(e)]
+        finally:
+            if self._mutex.locked():
+                self._mutex.release()
+
+    def schedule(self, session, job_information, auth_token):
+        """
+        Allocates a job and starts the rendering resource process. If successful, the session
+        job_id is populated and the session status is set to SESSION_STATUS_STARTING
+        :param session: Current user session
+        :param job_information: Information about the job
+        :param auth_token:
+        :return: A Json response containing on ok status or a description of the error
+        """
+        self._auth_token = auth_token
+        return self.allocate(session, job_information)
 
     @staticmethod
     def _build_start_command_line(session, job_information):
@@ -292,6 +306,7 @@ class UnicoreJobManager(object):
 
         # Modules
         full_command = '"#!/bin/sh\n'
+        full_command = full_command + 'echo HOSTNAME=$HOSTNAME\n'
         full_command = full_command + 'module purge\n'
         if rr_settings.modules is not None:
             values = rr_settings.modules.split()
@@ -318,8 +333,7 @@ class UnicoreJobManager(object):
             full_command += rr_settings.command_line
             for parameter in values:
                 full_command += ' ' + parameter
-
-        full_command += ' &\n"'
+        full_command += '\n"'
         return full_command
 
     def start(self, session, job_information):
@@ -335,38 +349,11 @@ class UnicoreJobManager(object):
             session.status = SESSION_STATUS_STARTING
             session.save()
 
-            # the 'resource.sh' script that will be uploaded
-            start_sh_content = \
-                self._build_start_command_line(session, job_information)
-
-            # list of files to be uploaded
-            # NOTE files can also be staged-in from remote locations or can be
-            # already present on the HPC filesystem
-            start_sh = {'To': 'start.sh', 'Data': start_sh_content}
-            inputs = [start_sh]
-
-            # Submit the job
-            self.submit(session.http_host + "/jobs",
-                        job_information, job_information.auth_token, inputs)
-            log.info(1, 'Job submitted to %s' % session.job_id)
-
-            # check status
-            log.info(1, self.get_properties(session.job_id,
-                                            job_information.auth_token)['status'])
-
-            # list files in job working directory
-            job_information.work_dir = self.get_working_directory(
-                session.job_id, job_information.auth_token)
-            log.info(1, 'Working directory ' + job_information.work_dir)
-            log.info(1, self.get_properties(
-                job_information.work_dir + "/files",
-                job_information.auth_token)['children'])
+            self.invoke_action(session.job_id, "start")
 
             rr_settings = \
                 manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
-            if rr_settings.wait_until_running:
-                session.status = SESSION_STATUS_STARTING
-            else:
+            if not rr_settings.wait_until_running:
                 session.status = SESSION_STATUS_RUNNING
             session.save()
             response = json.dumps({'message': session.renderer_id + ' successfully started'})
@@ -391,31 +378,21 @@ class UnicoreJobManager(object):
         """
         result = [500, 'Unexpected error']
         try:
+            self._work_dir = None
             self._mutex.acquire()
-            # pylint: disable=E1101
-            setting = \
-                manager.RenderingResourceSettings.objects.get(
-                    id=session.renderer_id)
-            if setting.graceful_exit:
-                log.info(1, 'Gracefully exiting rendering resource')
-                try:
-                    url = 'http://' + session.http_host + \
-                          ':' + str(session.http_port) + '/' + \
-                          settings.RR_SPECIFIC_COMMAND_EXIT
-                    log.info(1, url)
-                    r = requests.put(
-                        url=url,
-                        timeout=global_settings.REQUEST_TIMEOUT)
-                    r.close()
-                # pylint: disable=W0702
-                except requests.exceptions.RequestException as e:
-                    log.error(traceback.format_exc(e))
-            result = self.kill(session)
-        except OSError as e:
-            msg = str(e)
-            log.error(msg)
-            response = json.dumps({'contents': msg})
-            result = [400, response]
+            session.status = SESSION_STATUS_STOPPING
+            session.save()
+
+            my_headers = dict()
+            my_headers['Accept'] = 'application/json'
+            my_headers['Content-Type'] = 'application/json'
+            my_headers['Authorization'] = self._auth_token
+            # make sure UNICORE does not start the job before we have uploaded data
+            r = requests.delete(session.job_id, headers=my_headers, verify=False)
+            log.info(1, r.content)
+            if r.status_code != 200:
+                obj = json.loads(r.content)
+                raise RuntimeError('Error deleting job: ' + r.content['errorMessage'])
         finally:
             if self._mutex.locked():
                 self._mutex.release()
@@ -448,7 +425,13 @@ class UnicoreJobManager(object):
         :param session: Current user session
         :return: The hostname of the host if the job is running, empty otherwise
         """
-        return session.http_host
+        if session.job_id != '':
+            log_file = self._get_file_content(self._work_dir + '/files/stdout')
+            if log_file is not None:
+                value = re.search(r'HOSTNAME=(\w+)', log_file).group(1)
+                log.info('HOSTNAME=' + str(value))
+                return value
+        return ''
 
     def job_information(self, session):
         """
@@ -458,24 +441,23 @@ class UnicoreJobManager(object):
         """
         return self._query(session)
 
-    def rendering_resource_out_log(self, session, job_information):
+    def rendering_resource_out_log(self, session):
         """
         Returns the contents of the rendering resource output file
         :param session: Current user session
         :return: A string containing the output log
         """
-        return self._get_file_content(job_information.work_directory +
-                                      '/files/stdout', job_information.auth_token)
+        return self._get_file_content(self._work_dir + '/files/stdout')
 
-    def rendering_resource_err_log(self, session, job_information):
+    def rendering_resource_err_log(self, session):
         """
         Returns the contents of the rendering resource error file
         :param session: Current user session
         :return: A string containing the error log
         """
-        return self._rendering_resource_log(settings.SLURM_ERR_FILE, job_information)
+        return self._get_file_content(self._work_dir + '/files/stdout')
 
-    def _get_file_content(self, file_url, headers, check_size_limit=True, max_size=2048000):
+    def _get_file_content(self, file_url, check_size_limit=True, max_size=2048000):
         """
         :param file_url:
         :param headers:
@@ -483,17 +465,21 @@ class UnicoreJobManager(object):
         :param MAX_SIZE:
         :return:
         """
-        if check_size_limit:
-            size = self.get_properties(file_url, headers)['size']
-            if size > max_size:
-                raise RuntimeError("File size too large!")
-        my_headers = headers.copy()
-        my_headers['Accept'] = "application/octet-stream"
-        r = requests.get(file_url, headers=my_headers, verify=False)
-        if r.status_code != 200:
-            raise RuntimeError("Error getting file data: %s" % r.status_code)
-        else:
-            return r.content
+        try:
+            log.info(1, 'Getting file content from ' + file_url)
+            if check_size_limit:
+                size = self.get_properties(file_url)['size']
+                if size > max_size:
+                    raise RuntimeError("File size too large!")
+            my_headers = []
+            my_headers['Authorization'] = self._auth_token
+            my_headers['Accept'] = "application/octet-stream"
+            r = requests.get(file_url, headers=my_headers, verify=False)
+            if r.status_code == 200:
+                return r.content
+        except RuntimeError as e:
+            log.error(e)
+        return None
 
     def _query(self, session, attribute=None):
         """
@@ -502,25 +488,10 @@ class UnicoreJobManager(object):
         :param attribute: Attribute to be queried
         :return: A Json response containing an ok status or a description of the error
         """
-        if session.job_id is not None:
+        if session.job_id is not None and attribute is not None:
             try:
-                return self.get_properties(session.job_id, session.auth_token)['status']
+                return self.get_properties(session.job_id)[attribute]
             except OSError as e:
                 log.error(str(e))
                 return None
         return None
-
-    def _rendering_resource_log(self, extension, job_information):
-        """
-        Returns the contents of the specified file
-        :param session: Current user session
-        :param extension: File extension (typically err or out)
-        :return: A string containing the log
-        """
-        if extension == 'out':
-            return self._get_file_content(job_information.work_dir +
-                                          '/files/stdout', job_information.auth_token)
-        elif extension == 'err':
-            return self._get_file_content(job_information.work_dir +
-                                          '/files/stderr', job_information.auth_token)
-        return 'Not currently available'
