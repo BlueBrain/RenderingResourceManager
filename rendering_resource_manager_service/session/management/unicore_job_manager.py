@@ -45,7 +45,7 @@ import rendering_resource_manager_service.service.settings as global_settings
 
 class UnicoreJobManager(object):
     """
-    The job manager class provides methods for managing slurm jobs
+    The job manager class provides methods for managing Unicore jobs
     """
 
     def __init__(self):
@@ -54,10 +54,11 @@ class UnicoreJobManager(object):
         """
         self._mutex = Lock()
         self._base_url = None
-        self._auth_token = None # Must be moved to session
         self._registry_url = None
-        self._work_dir = None # Must be moved to session
         self._http_proxies = global_settings.UNICORE_DEFAULT_HTTP_PROXIES
+        # TODO: Move following members to session object
+        self._auth_token = None
+        self._work_dir = None
 
     def _get_json_headers(self):
         """
@@ -65,8 +66,8 @@ class UnicoreJobManager(object):
         """
         headers = dict()
         headers['Authorization'] = self._auth_token
-        headers['Content-type'] = "application/json"
-        headers['Accept'] = "application/json"
+        headers['Content-type'] = 'application/json'
+        headers['Accept'] = 'application/json'
         return headers
 
     def _get_octet_stream_headers(self):
@@ -75,8 +76,8 @@ class UnicoreJobManager(object):
         """
         headers = dict()
         headers['Authorization'] = self._auth_token
-        headers['Content-type'] = "application/octet-stream"
-        headers['Accept'] = "application/octet-stream"
+        headers['Content-type'] = 'application/octet-stream'
+        headers['Accept'] = 'application/octet-stream'
         return headers
 
     def get_sites(self):
@@ -89,14 +90,14 @@ class UnicoreJobManager(object):
         r = requests.get(registry_url, proxies=self._http_proxies,
                          headers=self._get_json_headers(), verify=False)
         if r.status_code != 200:
-            raise RuntimeError("Error accessing registry at %s: [%s] %s" %
+            raise RuntimeError('Error accessing registry at %s: [%s] %s' %
                                (registry_url, r.status_code, r.reason))
         sites = {}
         for x in r.json()['entries']:
             # just want the "core" URL and the site ID
             href = x['href']
             service_type = x['type']
-            if "TargetSystemFactory" == service_type:
+            if 'TargetSystemFactory' == service_type:
                 base = re.match(r"(https://\S+/rest/core).*", href).group(1)
                 site_name = re.match(r"https://\S+/(\S+)/rest/core", href).group(1)
                 sites[site_name] = base
@@ -105,22 +106,21 @@ class UnicoreJobManager(object):
 
     def get_site(self, name):
         """
-        :param name:
-        :param headers:
-        :return:
+        :param name: Name of the site
+        :return: Description of the site
         """
         return self.get_sites().get(name, None)
 
     def get_properties(self, resource):
         """
         get JSON properties of a resource
-        :param resource:
-        :return:
+        :param resource: Resource to get the properties from
+        :return: Properties of the specified resource
         """
         r = requests.get(resource, proxies=self._http_proxies,
                          headers=self._get_json_headers(), verify=False)
         if r.status_code != 200:
-            raise RuntimeError("Error getting properties: %s" % r.status_code)
+            raise RuntimeError('Error getting properties: %s' % r.status_code)
         else:
             return r.json()
 
@@ -137,9 +137,9 @@ class UnicoreJobManager(object):
 
     def invoke_action(self, job_url, action, data={}):
         """
-        :param resource:
-        :param action:
-        :param data:
+        :param job_url: Url of the job on which the action is executed
+        :param action: Action to execute
+        :param data: Data associated with the action
         :return:
         """
         action_url = self.get_properties(job_url)['_links']['action:' + action]['href']
@@ -147,14 +147,13 @@ class UnicoreJobManager(object):
                           headers=self._get_json_headers(), verify=False)
         if r.status_code != 200:
             log.error(r.content)
-            raise RuntimeError("Error invoking action: %s" % r.status_code)
+            raise RuntimeError('Error invoking action: %s' % r.status_code)
         return r.json()
 
     def upload(self, destination, file_desc):
         """
-        :param destination:
-        :param file_desc:
-        :return:
+        :param destination: Where to upload the file
+        :param file_desc: File descriptor
         """
         name = file_desc['To']
         data = file_desc['Data']
@@ -162,21 +161,24 @@ class UnicoreJobManager(object):
         r = requests.put(destination + "/" + name, proxies=self._http_proxies, data=data,
                          headers=self._get_octet_stream_headers(), verify=False)
         if r.status_code != 204:
-            raise RuntimeError("Error uploading data: %s" % r.status_code)
+            raise RuntimeError('Error uploading data: %s' % r.status_code)
 
     def is_running(self, job):
         """
-        check status for a job
-        :param job:
-        :param headers:
+        Check status for a job
+        :param job: Job to check
         :return:
         """
         properties = self.get_properties(job)
         status = properties['status']
-        return ("SUCCESSFUL" != status) and ("FAILED" != status)
+        return ('SUCCESSFUL' != status) and ('FAILED' != status)
 
     def get_jobs(self, properties):
-        """ get JSON properties of a resource """
+        """
+        Get list of jobs for the current user
+        :param properties: Job properties
+        :return: List of jobs in a JSon representation
+        """
         url = properties['_links']['jobs']['href']
         r = requests.get(url, proxies=self._http_proxies,
                          headers=self._get_json_headers(), verify=False)
@@ -185,20 +187,25 @@ class UnicoreJobManager(object):
         return r.json()
 
     def clear_jobs(self, properties):
-        """ Clear all job placeholders a resource """
+        """
+        Clear all job placeholders a resource
+        :param properties: Job properties
+        """
         jobs = self.get_jobs(properties)["jobs"]
         for job in jobs:
             r = requests.delete(job, proxies=self._http_proxies,
                                 headers=self._get_json_headers(), verify=False)
             if r.status_code != 200 and r.status_code != 204:
                 raise RuntimeError(
-                    "Error deleting jobs %s: %s" % (job, r.status_code))
+                    'Error deleting jobs %s: %s' % (job, r.status_code))
 
     def submit(self, session, job_information):
         """
         Submits a job to the given URL, which can be the ".../jobs" URL or a ".../sites/site_name/"
         URL. If inputs is not empty, the listed input data files are uploaded to the job's working
         directory, and a "start" command is sent to the job.
+        :param session: Current user session
+        :param job_information: Job properties
         """
         # make sure UNICORE does not start the job before we have uploaded data
         job_information.job['haveClientStageIn'] = 'true'
@@ -248,22 +255,20 @@ class UnicoreJobManager(object):
             # get information about the current user, e.g.
             # role, Unix login and group(s)
             props = self.get_properties(self._registry_url)
-            # if not 'user' == props['client']['role']['selected']:
-            #     log.error('Account is not registered on the selected site')
+            if not 'user' == props['client']['role']['selected']:
+                log.error('Account is not registered on the selected site')
             self.clear_jobs(props)
-            # setup the job - please refer to
-            # http://unicore.eu/documentation/manuals/unicore/files/ucc/ucc-manual.html
-            # for more options
+            # setup the job - please refer to the following link
+            # https://unicore-dev.zam.kfa-juelich.de/documentation/
+            #   ucc-7.8.0/ucc-manual.html#ucc_jobdescription
             job_information.job = dict()
 
             # Use a shell script, often it is better to setup a server-side 'Application' for a
             # simulation code and invoke that
             job_information.job['ApplicationName'] = 'Bash shell'
-            # job_information.job['Executable'] = '/usr/bash'
             job_information.job['Parameters'] = {'SOURCE': 'input.sh'}
             # Request resources nodes etc
-            #job_information.job['Resources'] = {'Nodes': job_information.nb_nodes}
-            job_information.job['Resources'] = {'Nodes': 1}
+            job_information.job['Resources'] = {'Nodes': max(1, job_information.nb_nodes)}
 
             # Submit the job
             self.submit(session, job_information)
@@ -285,7 +290,7 @@ class UnicoreJobManager(object):
         job_id is populated and the session status is set to SESSION_STATUS_STARTING
         :param session: Current user session
         :param job_information: Information about the job
-        :param auth_token:
+        :param auth_token: Token for Unicore authentication
         :return: A Json response containing on ok status or a description of the error
         """
         self._auth_token = auth_token
@@ -294,9 +299,10 @@ class UnicoreJobManager(object):
     @staticmethod
     def _build_start_command_line(session, job_information):
         """
-        :param session:
-        :param job_information:
-        :return:
+        Builds the command line to start the rendering resource
+        :param session: Current user session
+        :param job_information: Job description
+        :return: Command line to start the rendering resource
         """
         rr_settings = \
             manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
@@ -346,10 +352,7 @@ class UnicoreJobManager(object):
         """
         try:
             self._mutex.acquire()
-            # session.status = SESSION_STATUS_STARTING
-            # session.save()
-
-            self.invoke_action(session.job_id, "start")
+            self.invoke_action(session.job_id, 'start')
 
             rr_settings = \
                 manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
@@ -440,7 +443,7 @@ class UnicoreJobManager(object):
             elif status == 'SUCCESSFUL' or status == 'FAILED':
                 self.stop(session)
             else:
-                # CHANGE TO STDOUT when Brayns is deployed
+                # TODO: CHANGE TO STDOUT when Renderer is deployed on the cluster
                 log_file = self._get_file_content(self._work_dir + '/files/stderr')
                 if log_file is not None:
                     try:
@@ -481,18 +484,18 @@ class UnicoreJobManager(object):
 
     def _get_file_content(self, file_url, check_size_limit=True, max_size=2048000):
         """
-        :param file_url:
-        :param headers:
-        :param check_size_limit:
-        :param MAX_SIZE:
-        :return:
+        Returns the contents of a file stored on the Unicore file system
+        :param file_url: URL of the file
+        :param check_size_limit: Check size limit before download
+        :param max_size: The maximum size of the file
+        :return: The contents of the remote file
         """
         try:
             log.info(2, 'Getting file content from ' + file_url)
             if check_size_limit:
                 size = self.get_properties(file_url)['size']
                 if size > max_size:
-                    raise RuntimeError("File size too large!")
+                    raise RuntimeError('File size too large!')
             r = requests.get(file_url, proxies=self._http_proxies,
                              headers=self._get_octet_stream_headers(), verify=False)
             if r.status_code == 200:
@@ -503,7 +506,7 @@ class UnicoreJobManager(object):
 
     def _query(self, session, attribute=None):
         """
-        Queries Slurm for information
+        Queries Unicore for information
         :param session: Current user session
         :param attribute: Attribute to be queried
         :return: A Json response containing an ok status or a description of the error
