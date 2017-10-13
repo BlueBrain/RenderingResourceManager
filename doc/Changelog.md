@@ -3,6 +3,11 @@ Changelog {#Changelog}
 
 ## Rendering Resource Manager
 
+# Release 0.6.0
+
+* [73](https://github.com/BlueBrain/RenderingResourceManager/pull/73):
+  Added Unicore allocation manager
+
 # Release 0.4.0
 
 * [46](https://github.com/BlueBrain/RenderingResourceManager/pull/46):
