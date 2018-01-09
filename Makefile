@@ -8,10 +8,10 @@ INSTALL_MODULES=.
 COVER_PACKAGES=hbp_rendering_resource_manager_service
 
 #documented modules
-DOC_MODULES=
+DOC_MODULES=docs
 
 #no need to do coverage on the mock objects
-IGNORE_LINT=
+IGNORE_LINT=docs/conf.py
 
 #need a later version than 1.4.1 to install ipywidgets and ipython
 #we choose 9.0.1 here to match the pip version in collab notebooks
