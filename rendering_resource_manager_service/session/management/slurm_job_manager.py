@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 # pylint: disable=W0403
 # pylint: disable=R0915
+# pylint: disable=W0613
 
 # Copyright (c) 2014-2015, Human Brain Project
 #                          Cyrille Favreau <cyrille.favreau@epfl.ch>
@@ -61,12 +62,13 @@ class SlurmJobManager(object):
         """
         self._mutex = Lock()
 
-    def schedule(self, session, job_information):
+    def schedule(self, session, job_information, auth_token=None):
         """
         Allocates a job and starts the rendering resource process. If successful, the session
         job_id is populated and the session status is set to SESSION_STATUS_STARTING
         :param session: Current user session
         :param job_information: Information about the job
+        :param auth_token: Currently not used by Slurm
         :return: A Json response containing on ok status or a description of the error
         """
         status = self.allocate(session, job_information)
