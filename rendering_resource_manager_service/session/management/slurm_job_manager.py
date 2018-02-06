@@ -148,11 +148,11 @@ class SlurmJobManager(object):
                 manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
 
             # Modules
-            full_command = 'module purge\n'
+            full_command = '"source /etc/profile &&  module purge && '
             if rr_settings.modules is not None:
                 values = rr_settings.modules.split()
                 for module in values:
-                    full_command += 'module load ' + module.strip() + '\n'
+                    full_command += 'module load ' + module.strip() + ' && '
 
             # Environment variables
             if rr_settings.environment_variables is not None:
@@ -175,30 +175,23 @@ class SlurmJobManager(object):
                 for parameter in values:
                     full_command += ' ' + parameter
 
+            full_command += rr_settings.command_line
+            full_command += ' ' + rest_parameters
+
             # Output redirection
             full_command += ' > ' + self._file_name(session, settings.SLURM_OUT_FILE)
             full_command += ' 2> ' + self._file_name(session, settings.SLURM_ERR_FILE)
-            full_command += ' &\n'
+            full_command += '"'
 
-            # Start Process on cluster
-            command_line = '/usr/bin/ssh -i ' + \
+            command_line = '/usr/bin/ssh -f -o StrictHostKeyChecking=no -i ' + \
                            global_settings.SLURM_SSH_KEY + ' ' + \
                            global_settings.SLURM_USERNAME + '@' + \
                            session.http_host
 
-            log.info(1, 'Connect to cluster machine: ' + command_line)
-            process = subprocess.Popen(
-                [command_line],
-                shell=True,
-                stdin=subprocess.PIPE,
-                stdout=subprocess.PIPE,
-                stderr=subprocess.PIPE)
-
-            log.info(1, 'Full command:\n' + full_command)
-            process.stdin.write(full_command)
-            output = process.communicate()[0]
-            log.info(1, output)
-            process.stdin.close()
+            ssh_command = command_line + ' ' + full_command
+            subprocess.Popen([ssh_command], shell=True, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
+            log.info(1, 'Connect to cluster machine and execute command: ' + ssh_command)
 
             if rr_settings.wait_until_running:
                 session.status = SESSION_STATUS_STARTING
@@ -288,12 +281,18 @@ class SlurmJobManager(object):
         """
         Retrieve the hostname for the host of the given job is allocated.
         Note: this uses ssh and scontrol on the SLURM_HOST
+        Note: Due to DNS migration of CSCS compute nodes to bbp.epfl.ch domain
+        it uses hardcoded value based on the front-end dns name (which was not migrated)
         :param session: Current user session
         :return: The hostname of the host if the job is running, empty otherwise
         """
         hostname = self._query(session, 'BatchHost')
         if hostname != '':
-            hostname = hostname + '.' + str(session.cluster_node.partition('.')[2])
+            domain = self._get_domain(session)
+            if domain == 'cscs.ch':
+                return hostname + '.bbp.epfl.ch'
+            elif domain == 'epfl.ch':
+                hostname = hostname + '.' + domain
         return hostname
 
     def job_information(self, session):
@@ -352,16 +351,20 @@ class SlurmJobManager(object):
                 log.error(str(e))
         return value
 
-    @staticmethod
-    def _file_name(session, extension):
+    def _file_name(self, session, extension):
         """
         Returns the contents of the log file with the specified extension
         :param session: Current user session
         :param extension: file extension (typically err or out)
         :return: A string containing the error log
         """
+        domain = self._get_domain(session)
+        if domain == 'epfl.ch':
+            return settings.SLURM_OUTPUT_PREFIX_NFS + '_' + str(session.job_id) + \
+                   '_' + session.renderer_id + '_' + extension
+
         return settings.SLURM_OUTPUT_PREFIX + '_' + str(session.job_id) + \
-               '_' + session.renderer_id + '_' + extension
+           '_' + session.renderer_id + '_' + extension
 
     def _rendering_resource_log(self, session, extension):
         """
@@ -389,6 +392,15 @@ class SlurmJobManager(object):
             return str(e)
         except IOError as e:
             return str(e)
+
+    @staticmethod
+    def _get_domain(session):
+        """
+        Return the domain name of node used in the current session
+        :param session: Current user session
+        :return: A string containing the DNS domain
+        """
+        return session.cluster_node.partition('.')[2]
 
     @staticmethod
     def _build_allocation_command(session, job_information):

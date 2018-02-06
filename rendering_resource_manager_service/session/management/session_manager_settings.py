@@ -58,6 +58,9 @@ REQUEST_HEADER_AUTHORIZATION = 'HTTP_AUTHORIZATION'
 # SLURM
 SLURM_OUTPUT_PREFIX = '/gpfs/bbp.cscs.ch/home/' + global_settings.SLURM_USERNAME +\
                       '/var/log/vws'
+SLURM_OUTPUT_PREFIX_NFS = '/home/' + global_settings.SLURM_USERNAME +\
+                      '/var/log/vws'
+
 SLURM_ERR_FILE = 'err.log'
 SLURM_OUT_FILE = 'out.log'
 SLURM_ALLOCATION_TIMEOUT = 10
