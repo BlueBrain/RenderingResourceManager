@@ -189,9 +189,8 @@ class SlurmJobManager(object):
                            session.http_host
 
             ssh_command = command_line + ' ' + full_command
-            subprocess.Popen([ssh_command], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-
-
+            subprocess.Popen([ssh_command], shell=True, stdout=subprocess.PIPE,
+                             stderr=subprocess.PIPE)
             log.info(1, 'Connect to cluster machine and execute command: ' + ssh_command)
 
             if rr_settings.wait_until_running:
@@ -289,9 +288,9 @@ class SlurmJobManager(object):
         """
         hostname = self._query(session, 'BatchHost')
         if hostname != '':
-            domain = self.__get_domain(session)
+            domain = self._get_domain(session)
             if domain == 'cscs.ch':
-                return hostname  + '.bbp.epfl.ch'
+                return hostname + '.bbp.epfl.ch'
             elif domain == 'epfl.ch':
                 hostname = hostname + '.' + domain
         return hostname
@@ -359,7 +358,7 @@ class SlurmJobManager(object):
         :param extension: file extension (typically err or out)
         :return: A string containing the error log
         """
-        domain = self.__get_domain(session)
+        domain = self._get_domain(session)
         if domain == 'epfl.ch':
             return settings.SLURM_OUTPUT_PREFIX_NFS + '_' + str(session.job_id) + \
                    '_' + session.renderer_id + '_' + extension
@@ -395,7 +394,7 @@ class SlurmJobManager(object):
             return str(e)
 
     @staticmethod
-    def __get_domain(session):
+    def _get_domain(session):
         """
         Return the domain name of node used in the current session
         :param session: Current user session
