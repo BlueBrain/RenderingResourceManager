@@ -168,15 +168,12 @@ class SlurmJobManager(object):
                 str(session.http_port),
                 'rest' + str(rr_settings.id + session.id),
                 str(session.job_id))
-            if rr_settings.environment_variables != '':
-                values = rest_parameters.split()
-                values += job_information.params.split()
-                full_command += rr_settings.command_line
-                for parameter in values:
-                    full_command += ' ' + parameter
+            values = rest_parameters.split()
+            values += job_information.params.split()
+            for parameter in values:
+                full_command += ' ' + parameter
 
             full_command += rr_settings.command_line
-            full_command += ' ' + rest_parameters
 
             # Output redirection
             full_command += ' > ' + self._file_name(session, settings.SLURM_OUT_FILE)
