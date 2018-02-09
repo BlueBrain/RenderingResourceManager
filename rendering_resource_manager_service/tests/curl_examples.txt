@@ -1,5 +1,5 @@
 # Create session
-curl -curl --dump-header - --cookie 'HBP=test' -H "Accept:application/json" -H "Content-Type:application/json" -X POST --data '{"owner": "me", "renderer_id": "brayns"}' http://localhost:8383/rendering-resource-manager/v1/session/
+curl -curl --dump-header - --cookie 'HBP=test' -H "Accept:application/json" -H "Content-Type:application/json" -X POST --data '{"owner": "me", "configuration_id": "brayns"}' http://localhost:8383/rendering-resource-manager/v1/session/
 
 # Delete session
 curl -curl --dump-header - --cookie 'HBP=test' -H "Accept:application/json" -H "Content-Type:application/json" -X DELETE http://localhost:8383/rendering-resource-manager/v1/session/

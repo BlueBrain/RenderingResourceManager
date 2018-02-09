@@ -48,7 +48,7 @@ class Session(models.Model):
     created = models.DateTimeField(auto_now_add=True)
     valid_until = models.DateTimeField(auto_now_add=False)
     owner = models.CharField(max_length=20)
-    renderer_id = models.CharField(default='undefined', max_length=50)
+    configuration_id = models.CharField(default='undefined', max_length=50)
     job_id = models.CharField(max_length=2048, default='')
     process_pid = models.IntegerField(default=-1)
     http_host = models.CharField(default='localhost', max_length=20)
@@ -65,6 +65,6 @@ class Session(models.Model):
         ordering = ('id', 'created',)
 
     def __str__(self):
-        return '%s, %s' % (self.owner, self.renderer_id)
+        return '%s, %s' % (self.owner, self.configuration_id)
 
     __unicode__ = __str__

@@ -305,7 +305,7 @@ class UnicoreJobManager(object):
         :return: Command line to start the rendering resource
         """
         rr_settings = \
-            manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
+            manager.RenderingResourceSettingsManager.get_by_id(session.configuration_id.lower())
 
         # Modules
         full_command = '"#!/bin/sh\n'
@@ -355,11 +355,11 @@ class UnicoreJobManager(object):
             self.invoke_action(session.job_id, 'start')
 
             rr_settings = \
-                manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
+                manager.RenderingResourceSettingsManager.get_by_id(session.configuration_id.lower())
             if not rr_settings.wait_until_running:
                 session.status = SESSION_STATUS_RUNNING
                 session.save()
-            response = json.dumps({'message': session.renderer_id + ' successfully started'})
+            response = json.dumps({'message': session.configuration_id + ' successfully started'})
             return [200, response]
         except RuntimeError as e:
             log.error(str(e))

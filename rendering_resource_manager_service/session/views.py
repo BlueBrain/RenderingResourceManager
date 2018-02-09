@@ -65,7 +65,7 @@ class SessionSerializer(serializers.ModelSerializer):
         Meta class for the Session Serializer
         """
         model = Session
-        fields = ('id', 'owner', 'renderer_id')
+        fields = ('id', 'owner', 'configuration_id')
 
 
 class SessionDetailsSerializer(serializers.ModelSerializer):
@@ -84,7 +84,7 @@ class SessionDetailsSerializer(serializers.ModelSerializer):
         Meta class for the Session Serializer
         """
         model = Session
-        fields = ('id', 'owner', 'created', 'renderer_id', 'job_id', 'status',
+        fields = ('id', 'owner', 'created', 'configuration_id', 'job_id', 'status',
                   'http_host', 'http_port', 'valid_until', 'cluster_node')
 
 
@@ -181,7 +181,7 @@ class SessionViewSet(viewsets.ModelViewSet):
         session_id = sm.get_session_id()
         try:
             status = sm.create_session(
-                session_id, request.DATA['owner'], request.DATA['renderer_id'])
+                session_id, request.DATA['owner'], request.DATA['configuration_id'])
             response = HttpResponse(status=status[0],
                                     content=json.dumps({'session_id': str(session_id)}))
             log.info(1, 'Session created ' + str(session_id))
@@ -369,7 +369,7 @@ class CommandViewSet(viewsets.ModelViewSet):
             log.info(1, 'Querying JOB hostname for job id: ' + str(session.job_id))
             hostname = job_manager.globalJobManager.hostname(session)
             if hostname == '':
-                msg = 'Job scheduled but ' + session.renderer_id + ' is not yet running'
+                msg = 'Job scheduled but ' + session.configuration_id + ' is not yet running'
                 log.error(msg)
                 if session.status != SESSION_STATUS_STARTING:
                     session.status = SESSION_STATUS_SCHEDULED
