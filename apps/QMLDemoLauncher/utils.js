@@ -29,7 +29,7 @@ var currentStatus = STATUS_NONE;
 
 var openSessionParams = {
     owner: 'bbpdemolauncher',
-    renderer_id: ''
+    configuration_id: ''
 };
 
 var rendererParams = {
@@ -51,7 +51,7 @@ function doRequest(method, url, body) {
         }
     }
     oReq.open(method, url, true);
-    oReq.setRequestHeader('HBP', openSessionParams.renderer_id);
+    oReq.setRequestHeader('HBP', openSessionParams.configuration_id);
     var bodyStr
     if (body) {
         bodyStr = JSON.stringify(body);
@@ -61,7 +61,7 @@ function doRequest(method, url, body) {
 }
 
 function createSession(demo) {
-    openSessionParams.renderer_id=demo
+    openSessionParams.configuration_id=demo
     doRequest('POST', serviceUrl + '/session/',  openSessionParams  );
 }
 
@@ -85,7 +85,7 @@ function updateStatus(){
         }
     }
     oReq.open('GET', serviceUrl + '/session/status', true);
-    oReq.setRequestHeader('HBP', openSessionParams.renderer_id);
+    oReq.setRequestHeader('HBP', openSessionParams.configuration_id);
     oReq.send();
 }
 
