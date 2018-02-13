@@ -145,7 +145,7 @@ class SlurmJobManager(object):
             session.save()
 
             rr_settings = \
-                manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
+                manager.RenderingResourceSettingsManager.get_by_id(session.configuration_id.lower())
 
             # Modules
             full_command = '"source /etc/profile &&  module purge && '
@@ -168,12 +168,11 @@ class SlurmJobManager(object):
                 str(session.http_port),
                 'rest' + str(rr_settings.id + session.id),
                 str(session.job_id))
+            full_command += rr_settings.command_line
             values = rest_parameters.split()
             values += job_information.params.split()
             for parameter in values:
                 full_command += ' ' + parameter
-
-            full_command += rr_settings.command_line
 
             # Output redirection
             full_command += ' > ' + self._file_name(session, settings.SLURM_OUT_FILE)
@@ -188,6 +187,7 @@ class SlurmJobManager(object):
             ssh_command = command_line + ' ' + full_command
             subprocess.Popen([ssh_command], shell=True, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
+
             log.info(1, 'Connect to cluster machine and execute command: ' + ssh_command)
 
             if rr_settings.wait_until_running:
@@ -195,7 +195,7 @@ class SlurmJobManager(object):
             else:
                 session.status = SESSION_STATUS_RUNNING
             session.save()
-            response = json.dumps({'message': session.renderer_id + ' successfully started'})
+            response = json.dumps({'message': session.configuration_id + ' successfully started'})
             return [200, response]
         except OSError as e:
             log.error(str(e))
@@ -217,7 +217,7 @@ class SlurmJobManager(object):
             # pylint: disable=E1101
             setting = \
                 manager.RenderingResourceSettings.objects.get(
-                    id=session.renderer_id)
+                    id=session.configuration_id)
             if setting.graceful_exit:
                 log.info(1, 'Gracefully exiting rendering resource')
                 try:
@@ -358,10 +358,10 @@ class SlurmJobManager(object):
         domain = self._get_domain(session)
         if domain == 'epfl.ch':
             return settings.SLURM_OUTPUT_PREFIX_NFS + '_' + str(session.job_id) + \
-                   '_' + session.renderer_id + '_' + extension
+                   '_' + session.configuration_id + '_' + extension
 
         return settings.SLURM_OUTPUT_PREFIX + '_' + str(session.job_id) + \
-           '_' + session.renderer_id + '_' + extension
+           '_' + session.configuration_id + '_' + extension
 
     def _rendering_resource_log(self, session, extension):
         """
@@ -409,7 +409,7 @@ class SlurmJobManager(object):
         """
 
         rr_settings = \
-            manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
+            manager.RenderingResourceSettingsManager.get_by_id(session.configuration_id.lower())
 
         options = ''
         if job_information.exclusive_allocation or rr_settings.exclusive:

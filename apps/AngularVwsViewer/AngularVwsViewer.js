@@ -64,7 +64,7 @@ app.controller('vwsController', function($scope, $attrs){
     // Parameters
     $scope.openSessionParams = {
         owner: $attrs.renderer + 'Controller',
-        renderer_id: $attrs.renderer,
+        configuration_id: $attrs.renderer,
     };
 
     $scope.arguments = $attrs.arguments;
@@ -95,7 +95,7 @@ app.controller('vwsController', function($scope, $attrs){
         var oReq = new XMLHttpRequest();
         oReq.withCredentials = true;
         oReq.open(verb, full_url, true);
-        oReq.setRequestHeader(SESSION_COOKIE_ID, $scope.openSessionParams.renderer_id);
+        oReq.setRequestHeader(SESSION_COOKIE_ID, $scope.openSessionParams.configuration_id);
 
         var bodyStr;
         if (body) {

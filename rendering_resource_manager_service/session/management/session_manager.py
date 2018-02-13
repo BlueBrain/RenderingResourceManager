@@ -90,12 +90,12 @@ class SessionManager(object):
             sgs.save(force_insert=True)
 
     @classmethod
-    def create_session(cls, session_id, owner, renderer_id):
+    def create_session(cls, session_id, owner, configuration_id):
         """
         Creates a user session
         :param session_id: Id for the new session
         :param owner: Session owner
-        :param renderer_id: Id of the renderer associated to the session
+        :param configuration_id: Id of the configuration associated to the session
         :rtype A tuple containing the status and the description of the potential error
         """
         sgs = SystemGlobalSettings.objects.get()
@@ -104,7 +104,7 @@ class SessionManager(object):
                 session = Session(
                     id=session_id,
                     owner=owner,
-                    renderer_id=renderer_id,
+                    configuration_id=configuration_id,
                     created=datetime.datetime.utcnow(),
                     valid_until=datetime.datetime.now() +
                     datetime.timedelta(seconds=sgs.session_keep_alive_timeout))
@@ -349,25 +349,26 @@ class SessionManager(object):
                      SessionManager.status_as_string(session_status))
 
             if session_status == SESSION_STATUS_SCHEDULING:
-                status_description = str(session.renderer_id + ' is scheduled')
+                status_description = str(session.configuration_id + ' is scheduled')
             elif session_status == SESSION_STATUS_SCHEDULED or \
                             session_status == SESSION_STATUS_GETTING_HOSTNAME:
                 if session.http_host != '':
-                    status_description = session.renderer_id + ' is starting'
+                    status_description = session.configuration_id + ' is starting'
                     log.info(1, status_description)
                     session.status = SESSION_STATUS_STARTING
                     session.save()
                 else:
-                    status_description = str(session.renderer_id + ' is scheduled')
+                    status_description = str(session.configuration_id + ' is scheduled')
             elif session_status == SESSION_STATUS_STARTING:
                 # Rendering resource might be running but not yet capable of
                 # serving REST requests. The vocabulary is invoked to make
                 # sure that the rendering resource is ready to serve REST
                 # requests.
                 rr_settings = \
-                    manager.RenderingResourceSettingsManager.get_by_id(session.renderer_id.lower())
+                    manager.RenderingResourceSettingsManager.\
+                        get_by_id(session.configuration_id.lower())
                 if not rr_settings.wait_until_running:
-                    status_description = session.renderer_id + ' is up and running'
+                    status_description = session.configuration_id + ' is up and running'
                     log.info(1, status_description)
                     session.status = SESSION_STATUS_RUNNING
                     session.save()
@@ -376,14 +377,14 @@ class SessionManager(object):
                     status = SessionManager.request_vocabulary(session_id)
                     if status[0] == http_status.HTTP_200_OK and \
                                     status[0] != http_status.HTTP_404_NOT_FOUND:
-                        status_description = session.renderer_id + ' is up and running'
+                        status_description = session.configuration_id + ' is up and running'
                         log.info(1, status_description)
                         session.status = SESSION_STATUS_RUNNING
                         session.save()
                     elif status[0] == http_status.HTTP_404_NOT_FOUND:
                         return [http_status.HTTP_404_NOT_FOUND, 'Job has been cancelled']
                     else:
-                        status_description = session.renderer_id + \
+                        status_description = session.configuration_id + \
                             ' is starting but the HTTP interface is not yet available'
             elif session_status == SESSION_STATUS_RUNNING:
                 # Update the timestamp if the current value is expired
@@ -395,7 +396,7 @@ class SessionManager(object):
                 status = SessionManager.request_vocabulary(session_id)
                 if status[0] == http_status.HTTP_200_OK:
                     # Rendering resource is currently running
-                    status_description = session.renderer_id + ' is up and running'
+                    status_description = session.configuration_id + ' is up and running'
                 elif status[0] == http_status.HTTP_404_NOT_FOUND:
                     return SessionManager.__status_response(
                         http_code=status[0], session_id=session_id,
@@ -403,7 +404,7 @@ class SessionManager(object):
                         hostname='', port=0)
                 else:
                     # Rendering resource has been started but is not responding anymore, it is busy
-                    status_description = session.renderer_id + ' is busy'
+                    status_description = session.configuration_id + ' is busy'
                     session.status = SESSION_STATUS_BUSY
                     session.save()
 
@@ -411,7 +412,7 @@ class SessionManager(object):
                 status = SessionManager.request_vocabulary(session_id)
                 if status[0] == http_status.HTTP_200_OK:
                     # Rendering resource is not busy anymore
-                    status_description = session.renderer_id + ' is up and running'
+                    status_description = session.configuration_id + ' is up and running'
                     session.status = SESSION_STATUS_RUNNING
                     session.save()
                 else:
@@ -421,18 +422,18 @@ class SessionManager(object):
                             code=SESSION_STATUS_STOPPED, description='Job has been cancelled',
                             hostname='', port=0)
                     else:
-                        status_description = session.renderer_id + ' is busy'
+                        status_description = session.configuration_id + ' is busy'
 
             elif session_status == SESSION_STATUS_STOPPING:
                 # Rendering resource is currently in the process of terminating.
-                status_description = str(session.renderer_id + ' is terminating...')
+                status_description = str(session.configuration_id + ' is terminating...')
                 session.delete()
                 session.save()
             elif session_status == SESSION_STATUS_STOPPED:
                 # Rendering resource is currently not active.
-                status_description = str(session.renderer_id + ' is not active')
+                status_description = str(session.configuration_id + ' is not active')
             elif session_status == SESSION_STATUS_FAILED:
-                status_description = str('Job allocation failed for ' + session.renderer_id)
+                status_description = str('Job allocation failed for ' + session.configuration_id)
 
             status_code = session.status
             return SessionManager.__status_response(

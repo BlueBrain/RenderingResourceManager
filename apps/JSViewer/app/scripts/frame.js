@@ -45,7 +45,7 @@ var currentCameraPos;
 var error;
 var openSessionParams = {
     owner: 'bbpvizuser',
-    renderer_id: parent.document.getElementById('renderer').value
+    configuration_id: parent.document.getElementById('renderer').value
 };
 
 /*
@@ -110,7 +110,7 @@ var statusQuery = setInterval(function () {
                         }
                     });
 
-                    if (openSessionParams.renderer_id === 'brayns') {
+                    if (openSessionParams.configuration_id === 'brayns') {
                         doRequest('GET', serviceUrl + '/session/CAMERA', function (event) {
                             var res = JSON.parse(event.target.responseText);
                             camera.position.x = res.matrix[0];
@@ -162,7 +162,7 @@ function startRenderer(event) {
         var environment = parent.document.getElementById('environment').value;
 
         // Rendering options
-        if (openSessionParams.renderer_id === 'brayns') {
+        if (openSessionParams.configuration_id === 'brayns') {
             parameters += ' --renderer exobj';
             if (parent.document.getElementById('ambientocclusion').checked) {
                 parameters += ' --ambient-occlusion';
@@ -184,13 +184,13 @@ function startRenderer(event) {
         }
 
         // Data source
-        if (openSessionParams.renderer_id === 'livre') {
+        if (openSessionParams.configuration_id === 'livre') {
             parameters += ' --volume ' + dataSourceType + '://' + dataSource;
         }
-        if (openSessionParams.renderer_id === 'rtneuron') {
+        if (openSessionParams.configuration_id === 'rtneuron') {
             parameters += ' -b ' + dataSource;
         }
-        if (openSessionParams.renderer_id === 'brayns') {
+        if (openSessionParams.configuration_id === 'brayns') {
             parameters += ' --' + dataSourceType + '-folder ' + dataSource;
         }
         
@@ -216,7 +216,7 @@ function startRenderer(event) {
             height = 3240;
         }
 
-        if (openSessionParams.renderer_id === 'brayns') {
+        if (openSessionParams.configuration_id === 'brayns') {
             if (parameters.indexOf('buffer-height') === -1) {
                 parameters += ' --buffer-height ' + height;
             }
@@ -309,14 +309,14 @@ Number.prototype.toFixedDown = function (digits) {
  */
 function render() {
     if (camera.position.z != 0.0) {
-        if (openSessionParams.renderer_id == "brayns") {
+        if (openSessionParams.configuration_id == "brayns") {
             cameraMatrix.matrix[0] = -camera.position.x;
             cameraMatrix.matrix[1] = camera.position.y;
             cameraMatrix.matrix[2] = -camera.position.z;
         } else {
             // Rotation
             var scaling = 1;
-            if (openSessionParams.renderer_id === "rtneuron") {
+            if (openSessionParams.configuration_id === "rtneuron") {
                 scaling = 1000;
             }
             var alpha = -Math.asin(camera.position.x / camera.position.z);

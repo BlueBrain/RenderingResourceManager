@@ -29,7 +29,7 @@ from rendering_resource_manager_service.session.management.session_manager impor
 import json
 
 DEFAULT_USER = 'testuser'
-DEFAULT_RENDERER = 'testrenderer'
+DEFAULT_CONFIGURATION = 'testrenderer'
 
 
 class TestSessionManager(TestCase):
@@ -51,7 +51,7 @@ class TestSessionManager(TestCase):
         session_id = SessionManager.get_session_id()
         # Create session
         sm = SessionManager()
-        status = sm.create_session(session_id, DEFAULT_USER, DEFAULT_RENDERER)
+        status = sm.create_session(session_id, DEFAULT_USER, DEFAULT_CONFIGURATION)
         nt.assert_true(status[0] == 201)
         # Delete new session
         status = sm.delete_session(session_id)
@@ -62,10 +62,10 @@ class TestSessionManager(TestCase):
         session_id = SessionManager.get_session_id()
         sm = SessionManager()
         # Create session
-        status = sm.create_session(session_id, DEFAULT_USER, DEFAULT_RENDERER)
+        status = sm.create_session(session_id, DEFAULT_USER, DEFAULT_CONFIGURATION)
         nt.assert_true(status[0] == 201)
         # Create duplicate session
-        status = sm.create_session(session_id, DEFAULT_USER, DEFAULT_RENDERER)
+        status = sm.create_session(session_id, DEFAULT_USER, DEFAULT_CONFIGURATION)
         nt.assert_true(status[0] == 409)
         # Delete session
         status = sm.delete_session(session_id)
@@ -84,7 +84,7 @@ class TestSessionManager(TestCase):
         session_id = SessionManager.get_session_id()
         sm = SessionManager()
         # Create session
-        status = sm.create_session(session_id, DEFAULT_USER, DEFAULT_RENDERER)
+        status = sm.create_session(session_id, DEFAULT_USER, DEFAULT_CONFIGURATION)
         nt.assert_true(status[0] == 201)
         # List sessions
         sm = SessionManager()
@@ -94,7 +94,7 @@ class TestSessionManager(TestCase):
         # Decode JSON response
         decoded = json.loads(status[1].content)
         nt.assert_true(decoded[0]['owner'] == DEFAULT_USER)
-        nt.assert_true(decoded[0]['renderer_id'] == DEFAULT_RENDERER)
+        nt.assert_true(decoded[0]['configuration_id'] == DEFAULT_CONFIGURATION)
 
         # Delete session
         sm = SessionManager()
@@ -109,14 +109,14 @@ class TestSessionManager(TestCase):
         status = sm.suspend_sessions()
         nt.assert_true(status[0] == 200)
         # Create session
-        status = sm.create_session(session_id, DEFAULT_USER, DEFAULT_RENDERER)
+        status = sm.create_session(session_id, DEFAULT_USER, DEFAULT_CONFIGURATION)
         nt.assert_true(status[0] == 403)
         # List sessions
         sm = SessionManager()
         status = sm.resume_sessions()
         nt.assert_true(status[0] == 200)
         # Create session
-        status = sm.create_session(session_id, DEFAULT_USER, DEFAULT_RENDERER)
+        status = sm.create_session(session_id, DEFAULT_USER, DEFAULT_CONFIGURATION)
         nt.assert_true(status[0] == 201)
         # Delete session
         sm = SessionManager()
@@ -128,7 +128,7 @@ class TestSessionManager(TestCase):
         session_id = SessionManager.get_session_id()
         sm = SessionManager()
         # Create session
-        status = sm.create_session(session_id, DEFAULT_USER, DEFAULT_RENDERER)
+        status = sm.create_session(session_id, DEFAULT_USER, DEFAULT_CONFIGURATION)
         nt.assert_true(status[0] == 201)
         # Check session status (must be STOPPED)
         sm = SessionManager()

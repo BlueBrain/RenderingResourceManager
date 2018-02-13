@@ -56,7 +56,7 @@ class ProcessManager(object):
         """
         try:
             settings = manager.RenderingResourceSettingsManager.get_by_id(
-                session_info.renderer_id.lower())
+                session_info.configuration_id.lower())
             default_parameters = manager.RenderingResourceSettingsManager.format_rest_parameters(
                 str(settings.process_rest_parameters_format),
                 str(session_info.http_host),
@@ -145,7 +145,7 @@ class ProcessManager(object):
 
         try:
             settings = \
-                manager.RenderingResourceSettings.objects.get(id=session_info.renderer_id)
+                manager.RenderingResourceSettings.objects.get(id=session_info.configuration_id)
             if settings.graceful_exit:
                 try:
                     url = 'http://' + session_info.http_host + ':' + \
