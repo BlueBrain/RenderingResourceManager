@@ -164,20 +164,20 @@ class SessionManager(object):
         """
         try:
             session = Session.objects.get(id=session_id)
-            if not session.status == SESSION_STATUS_STOPPING:
-                log.info(1, 'Removing session ' + str(session_id))
-                session.status = SESSION_STATUS_STOPPING
-                session.save()
-                if session.process_pid != -1:
-                    process_manager.ProcessManager.stop(session)
-                if session.job_id is not None and session.job_id != '':
-                    jm = globalJobManager()
-                    jm.stop(session)
-                session.delete()
-                msg = 'Session successfully destroyed'
-                log.info(1, msg)
-                response = json.dumps({'contents': str(msg)})
-                return [http_status.HTTP_200_OK, response]
+            log.info(1, 'Removing session ' + str(session_id))
+            session.status = SESSION_STATUS_STOPPING
+            session.save()
+            if session.process_pid != -1:
+                process_manager.ProcessManager.stop(session)
+            if session.job_id is not None and session.job_id != '':
+                jm = globalJobManager()
+                jm.stop(session)
+                jm.kill(session)
+            session.delete()
+            msg = 'Session successfully destroyed'
+            log.info(1, msg)
+            response = json.dumps({'contents': str(msg)})
+            return [http_status.HTTP_200_OK, response]
         except Session.DoesNotExist as e:
             log.error(str(e))
             response = json.dumps({'contents': str(e)})
