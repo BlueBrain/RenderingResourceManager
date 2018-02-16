@@ -43,7 +43,6 @@ import rendering_resource_manager_service.utils.tools as tools
 from rendering_resource_manager_service.session.models import Session
 from rendering_resource_manager_service.session.management import job_manager
 from rendering_resource_manager_service.session.management import process_manager
-from rendering_resource_manager_service.session.management import image_feed_manager
 import management.session_manager as session_manager
 from rendering_resource_manager_service.session.models import \
     SESSION_STATUS_GETTING_HOSTNAME, SESSION_STATUS_SCHEDULED, SESSION_STATUS_STARTING
@@ -212,11 +211,6 @@ class SessionViewSet(viewsets.ModelViewSet):
         """
         sm = session_manager.SessionManager()
         session_id = sm.get_session_id_from_request(request)
-        log.info(1, 'Remove image feed route if it exists')
-        ifm = image_feed_manager.ImageFeedManager(session_id)
-        status = ifm.remove_route()
-        if status[0] != 200:
-            log.error(status[1])
         log.info(1, 'Remove session from db')
         status = sm.delete_session(session_id)
         log.info(1, 'Session deleted ' + str(session_id))
@@ -261,9 +255,6 @@ class CommandViewSet(viewsets.ModelViewSet):
 
             elif command == 'job':
                 status = cls.__job_information(session)
-                response = HttpResponse(status=status[0], content=status[1])
-            elif command == 'imagefeed':
-                status = cls.__image_feed(session_id)
                 response = HttpResponse(status=status[0], content=status[1])
             else:
                 url = request.get_full_path()
@@ -458,17 +449,6 @@ class CommandViewSet(viewsets.ModelViewSet):
             msg = 'Rendering resource is not yet available: ' + status[1]
             log.debug(1, msg)
             return status
-
-    @classmethod
-    def __image_feed(cls, session_id):
-        """
-        Get the route to image streaming server
-        :param : session_id: Id of the session holding the rendering resource
-        :rtype : An HTTP response containing uri of the image streaming server for the given session
-        """
-        log.info(1, 'Requesting image feed')
-        ifm = image_feed_manager.ImageFeedManager(session_id)
-        return ifm.get_route()
 
     @classmethod
     def __forward_request(cls, session, command, request):
