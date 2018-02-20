@@ -299,6 +299,7 @@ class CommandViewSet(viewsets.ModelViewSet):
         job_information.nb_gpus = body.get('nb_gpus', 0)
         job_information.nb_nodes = body.get('nb_nodes', 0)
         job_information.memory = body.get('memory', 0)
+        job_information.queue = body.get('queue')
         job_information.exclusive_allocation = body.get('exclusive', False)
         job_information.allocation_time = body.get('allocation_time', settings.SLURM_DEFAULT_TIME)
         sm = session_manager.SessionManager()

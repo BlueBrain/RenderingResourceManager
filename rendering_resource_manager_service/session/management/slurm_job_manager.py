@@ -436,6 +436,11 @@ class SlurmJobManager(object):
             value = job_information.memory
         options += ' --mem=' + str(value)
 
+        value = rr_settings.queue
+        if job_information.queue:
+            value = job_information.queue
+        options += ' -p ' + str(value)
+
         if job_information.reservation != '' and job_information.reservation is not None:
             options += ' --reservation=' + job_information.reservation
 
@@ -449,7 +454,6 @@ class SlurmJobManager(object):
         command_line = SLURM_SSH_COMMAND + session.cluster_node + \
                        ' salloc --no-shell' + \
                        ' --immediate=' + str(settings.SLURM_ALLOCATION_TIMEOUT) + \
-                       ' -p ' + rr_settings.queue + \
                        ' --account=' + rr_settings.project + \
                        ' --job-name=' + job_name + \
                        ' --time=' + allocation_time + \
