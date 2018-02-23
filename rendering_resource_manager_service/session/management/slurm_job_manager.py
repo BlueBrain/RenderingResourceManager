@@ -180,7 +180,7 @@ class SlurmJobManager(object):
             full_command += ' 2> ' + self._file_name(session, settings.SLURM_ERR_FILE)
             full_command += '\''
 
-            command_line = Template('"srun --jobid=$job_id /bin/bash -c $full_command"').\
+            command_line = Template('" srun --jobid=$job_id /bin/bash -c $full_command"').\
                 substitute(job_id=session.job_id, full_command=full_command)
 
             ssh_command = SLURM_SSH_COMMAND + session.cluster_node + command_line
