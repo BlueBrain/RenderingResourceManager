@@ -429,12 +429,14 @@ class SlurmJobManager(object):
         value = rr_settings.nb_gpus
         if job_information.nb_gpus != 0:
             value = job_information.nb_gpus
-        options += ' --gres=gpu:' + str(value)
+        if value != 0:
+            options += ' --gres=gpu:' + str(value)
 
         value = rr_settings.memory
         if job_information.memory != 0:
             value = job_information.memory
-        options += ' --mem=' + str(value)
+        if value != 0:
+            options += ' --mem=' + str(value)
 
         value = rr_settings.queue
         if job_information.queue:
