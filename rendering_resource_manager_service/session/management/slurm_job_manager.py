@@ -35,6 +35,7 @@ import traceback
 from threading import Lock
 import json
 import re
+from string import Template
 
 import rendering_resource_manager_service.session.management.session_manager_settings as settings
 from rendering_resource_manager_service.config.management import \
@@ -148,7 +149,7 @@ class SlurmJobManager(object):
                 manager.RenderingResourceSettingsManager.get_by_id(session.configuration_id.lower())
 
             # Modules
-            full_command = '"source /etc/profile &&  module purge && '
+            full_command = '\'source /etc/profile &&  module purge && '
             if rr_settings.modules is not None:
                 values = rr_settings.modules.split()
                 for module in values:
@@ -177,18 +178,17 @@ class SlurmJobManager(object):
             # Output redirection
             full_command += ' > ' + self._file_name(session, settings.SLURM_OUT_FILE)
             full_command += ' 2> ' + self._file_name(session, settings.SLURM_ERR_FILE)
-            full_command += '"'
+            full_command += '\''
 
-            command_line = '/usr/bin/ssh -f -o StrictHostKeyChecking=no -i ' + \
-                           global_settings.SLURM_SSH_KEY + ' ' + \
-                           global_settings.SLURM_USERNAME + '@' + \
-                           session.http_host
+            command_line = Template('"srun --jobid=$job_id /bin/bash -c $full_command"').\
+                substitute(job_id=session.job_id, full_command=full_command)
 
-            ssh_command = command_line + ' ' + full_command
+            ssh_command = SLURM_SSH_COMMAND + session.cluster_node + command_line
+
             subprocess.Popen([ssh_command], shell=True, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
 
-            log.info(1, 'Connect to cluster machine and execute command: ' + ssh_command)
+            log.info(1, 'Connect to frontend machine with command: ' + ssh_command)
 
             if rr_settings.wait_until_running:
                 session.status = SESSION_STATUS_STARTING
