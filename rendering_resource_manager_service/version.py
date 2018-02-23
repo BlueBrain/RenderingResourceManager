@@ -22,4 +22,4 @@
 # All rights reserved. Do not distribute without further notice.
 
 ''' version '''
-VERSION = "0.7.4.dev1"
+VERSION = "0.7.5.dev0"
