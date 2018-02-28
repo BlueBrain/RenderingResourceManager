@@ -170,9 +170,8 @@ class SessionManager(object):
             if session.process_pid != -1:
                 process_manager.ProcessManager.stop(session)
             if session.job_id is not None and session.job_id != '':
-                jm = globalJobManager()
-                jm.stop(session)
-                jm.kill(session)
+                globalJobManager.stop(session)
+                globalJobManager.kill(session)
             session.delete()
             msg = 'Session successfully destroyed'
             log.info(1, msg)
