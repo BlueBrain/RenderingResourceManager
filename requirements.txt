@@ -5,3 +5,5 @@ django-filter==0.8
 djangorestframework==2.3.14
 django-rest-swagger==0.1.14
 requests==2.9.1
+psycopg2-binary
+gunicorn==19.7.1
