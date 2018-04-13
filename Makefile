@@ -20,15 +20,15 @@ PYTHON_PIP_VERSION=pip==9.0.1
 ##### DO NOT MODIFY BELOW #####################
 
 ifndef CI_DIR
-CI_REPO?=ssh://bbpcode.epfl.ch/platform/ContinuousIntegration.git
+CI_REPO?=ssh://bbpvizuser@bbpcode.epfl.ch/platform/ContinuousIntegration.git
 CI_DIR?=ContinuousIntegration
 
 FETCH_CI := $(shell \
 		if [ ! -d $(CI_DIR) ]; then \
-			git clone $(CI_REPO) $(CI_DIR) > /dev/null;\
-			pushd $(CI_DIR);\
+			GIT_SSH_COMMAND="ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ssh-privatekey -vv" git clone $(CI_REPO) $(CI_DIR) ;\
+			cd $(CI_DIR);\
 			git checkout 478d1c4c58bddacde1983666a7d24cfc9c7ffab6;\
-			popd;\
+			cd .. ;\
 		fi;\
 		echo $(CI_DIR) )
 endif

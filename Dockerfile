@@ -5,13 +5,15 @@ FROM nginx:alpine
 WORKDIR /app
 ADD . /app
 
-RUN apk update && apk add openssh make py-pip \
+RUN apk update && apk add openssh make py-pip git \
 bash python2-dev gcc libc-dev \
 postgresql-dev supervisor && \
 pip install virtualenv
 
-RUN /usr/bin/make virtualenv && source platform_venv/bin/activate && \
-pip install -r requirements.txt
+RUN ["/bin/bash", "-c", "chmod 700 ssh-privatekey"]
+RUN ["/bin/bash", "-c", "cat ssh-privatekey"]
+RUN ["/bin/bash", "-c", "/usr/bin/make virtualenv"]
+RUN ["/bin/bash", "-c", "source platform_venv/bin/activate && pip install -r requirements.txt && export PYTHONPATH=$PWD:$PYTHONPATH"]
 
 ENV SLURM_SSH_KEY=/app/slurm-ssh-key
 
