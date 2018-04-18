@@ -39,8 +39,8 @@ admin_view = AdminViewSet.as_view({
 
 urlpatterns = patterns(
     '',
-    url(r'/admin', include(admin.site.urls)),
-    url(r'/admin/(?P<command>[a-zA-Z0-9]+)', admin_view),
+    url(r'admin', include(admin.site.urls)),
+    url(r'admin/(?P<command>[a-zA-Z0-9]+)', admin_view),
 )
 
 urlpatterns = format_suffix_patterns(urlpatterns)

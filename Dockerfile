@@ -1,7 +1,7 @@
 # In case of insufficient resources on OpenShift,
 # check https://bbpteam.epfl.ch/project/spaces/display/INFRA/OpenShift#OpenShift-OpenShiftbuildsexitswitherrorcode137.
 
-FROM nginx:alpine
+FROM alpine
 WORKDIR /app
 ADD . /app
 
@@ -11,25 +11,35 @@ postgresql-dev supervisor && \
 pip install virtualenv
 
 RUN ["/bin/bash", "-c", "chmod 700 ssh-privatekey"]
-RUN ["/bin/bash", "-c", "cat ssh-privatekey"]
 RUN ["/bin/bash", "-c", "/usr/bin/make virtualenv"]
 RUN ["/bin/bash", "-c", "source platform_venv/bin/activate && pip install -r requirements.txt && export PYTHONPATH=$PWD:$PYTHONPATH"]
 
 ENV SLURM_SSH_KEY=/app/slurm-ssh-key
 
-RUN mkdir /etc/nginx/sites-available && mkdir /etc/nginx/sites-enabled
+ENV SLURM_HOSTS=['bbpviz1.cscs.ch']
+ENV SLURM_PROJECT=TEST
+ENV SLURM_USERNAME=bbpvizsoa
+ENV SLURM_SSH_KEY=/app/slurm-ssh-key
+ENV SLURM_DEFAULT_TIME=2
+ENV SLURM_DEFAULT_QUEUE=2
+
+ENV DB_NAME=vizdemos_dev
+ENV DB_HOST=bbpdbsrv06.bbp.epfl.ch
+ENV DB_PORT=5432
+ENV DB_USER=vizdemos_dev
+ENV RRM_VERSION=1
+ENV RRM_SERVICE_PORT=8383
+
+RUN mkdir /var/tmp/django_cache
+
 RUN cd rendering_resource_manager_service && pwd
 
 ENV DOCKER_FILES=./rendering_resource_manager_service/deployment/docker
-COPY $DOCKER_FILES/supervisord.conf /etc/supervisord.conf 
-COPY $DOCKER_FILES/rrm.conf /etc/nginx/sites-available/
-COPY $DOCKER_FILES/nginx.conf /etc/nginx/nginx.conf
-COPY $DOCKER_FILES/programs.ini /etc/supervisor.d/
 COPY $DOCKER_FILES/local_settings.py /app/rendering_resource_manager_service/
-RUN ln -s /etc/nginx/sites-available/rrm.conf /etc/nginx/sites-enabled/rrm.conf
+COPY $DOCKER_FILES/gunicorn.sh /app/
+RUN chmod +x /app/gunicorn.sh
 
 ## Ports
-EXPOSE 80
+EXPOSE 8383
 
-## Run supervisor
-CMD /usr/bin/supervisord -c  /etc/supervisord.conf
+CMD /app/gunicorn.sh

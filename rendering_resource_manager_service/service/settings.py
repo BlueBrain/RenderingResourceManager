@@ -166,7 +166,7 @@ SWAGGER_SETTINGS = {
 }
 
 # Base URL prefix
-BASE_URL_PREFIX = r'^' + APPLICATION_NAME + '/' + API_VERSION
+BASE_URL_PREFIX = r''
 
 # Needed by unit testing
 sys.path.append(BASE_DIR)

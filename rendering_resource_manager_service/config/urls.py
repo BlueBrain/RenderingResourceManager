@@ -40,7 +40,7 @@ settings_list = RenderingResourceSettingsViewSet.as_view({
 
 urlpatterns = patterns(
     '',
-    url(r'/config/$', settings_list),
+    url(r'config/$', settings_list),
 )
 
 urlpatterns = format_suffix_patterns(urlpatterns)
