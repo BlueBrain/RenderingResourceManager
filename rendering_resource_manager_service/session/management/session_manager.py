@@ -376,12 +376,14 @@ class SessionManager(object):
                     status = SessionManager.request_vocabulary(session_id)
                     if status[0] == http_status.HTTP_200_OK and \
                                     status[0] != http_status.HTTP_404_NOT_FOUND:
-                        status_description = session.configuration_id + ' is up and running'
+                        status_description = session.configuration_id + ' is up and running at '
                         log.info(1, status_description)
                         session.status = SESSION_STATUS_RUNNING
                         session.save()
                     elif status[0] == http_status.HTTP_404_NOT_FOUND:
-                        return [http_status.HTTP_404_NOT_FOUND, 'Job has been cancelled']
+                        return SessionManager.__status_response(http_code=status[0], session_id=session_id,
+                            code=SESSION_STATUS_STOPPED, description='Job has been cancelled',
+                            hostname='', port=0)
                     else:
                         status_description = session.configuration_id + \
                             ' is starting but the HTTP interface is not yet available'

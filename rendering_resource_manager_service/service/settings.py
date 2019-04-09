@@ -45,7 +45,7 @@ APPLICATION_NAME = 'rendering-resource-manager'
 API_VERSION = 'v1'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
 TEMPLATE_DEBUG = False
 
@@ -112,9 +112,12 @@ WSGI_APPLICATION = 'rendering_resource_manager_service.service.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'OPTIONS': {'timeout': 20},
-        'NAME': os.path.join(BASE_DIR + '/tests', 'db.sqlite3'),
+        'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'NAME': 'vizdemos_dev',
+        'USER': 'vizdemos_dev',
+        'HOST': 'bbpdbsrv06.bbp.epfl.ch',
+        'PORT': '5432',
+	'PASSWORD': 'ieBuoMeece9l',
     }
 }
 
@@ -130,13 +133,13 @@ CACHES = {
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Zurich'
 
 USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = False
+USE_TZ = True
 
 
 # Static files (CSS, JavaScript, Images)
@@ -166,7 +169,8 @@ SWAGGER_SETTINGS = {
 }
 
 # Base URL prefix
-BASE_URL_PREFIX = r''
+# BASE_URL_PREFIX = r'^' + APPLICATION_NAME + '/' + API_VERSION
+BASE_URL_PREFIX = ''
 
 # Needed by unit testing
 sys.path.append(BASE_DIR)
@@ -175,17 +179,22 @@ sys.path.append(BASE_DIR + '/rendering_resource_manager_service')
 # Job allocator
 RESOURCE_ALLOCATOR_SLURM = 'SLURM'
 RESOURCE_ALLOCATOR_UNICORE = 'UNICORE'
-RESOURCE_ALLOCATOR = RESOURCE_ALLOCATOR_UNICORE
+RESOURCE_ALLOCATOR = RESOURCE_ALLOCATOR_SLURM
 
 # Slurm (To be modified by deployment process)
-SLURM_USERNAME = 'TO_BE_MODIFIED'
-SLURM_SSH_KEY = 'TO_BE_MODIFIED'
-SLURM_PROJECT = 'TO_BE_MODIFIED'
-SLURM_HOSTS = ['TO_BE_MODIFIED']
-SLURM_DEFAULT_QUEUE = 'TO_BE_MODIFIED'
-SLURM_DEFAULT_TIME = 'TO_BE_MODIFIED'
+
+
+SLURM_USERNAME = 'bbpvizsoa'
+SLURM_SSH_KEY = '/home/podhajsk/security/vizsoa.key'
+SLURM_PROJECT = 'proj3'
+SLURM_HOSTS = ['bbpviz1.epfl.ch']
+SLURM_DEFAULT_QUEUE = 'interactive'
+SLURM_DEFAULT_TIME = 30
+SLURM_ALLOCATION_TIMEOUT = os.environ['SLURM_ALLOCATION_TIMEOUT']
+
 
 # Unicore
+
 UNICORE_DEFAULT_REGISTRY_URL = 'TO_BE_MODIFIED'
 UNICORE_DEFAULT_SITE = 'TO_BE_MODIFIED'
 UNICORE_DEFAULT_HTTP_PROXIES = {

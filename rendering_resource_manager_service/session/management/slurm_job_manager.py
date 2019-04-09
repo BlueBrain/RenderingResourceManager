@@ -35,6 +35,7 @@ import traceback
 from threading import Lock
 import json
 import re
+import os
 from string import Template
 
 import rendering_resource_manager_service.session.management.session_manager_settings as settings
@@ -46,8 +47,8 @@ from rendering_resource_manager_service.session.models import \
     SESSION_STATUS_SCHEDULING, SESSION_STATUS_SCHEDULED, SESSION_STATUS_FAILED
 import rendering_resource_manager_service.service.settings as global_settings
 
-
-SLURM_SSH_COMMAND = '/usr/bin/ssh -i ' + \
+SSH_ENV = 'LD_PRELOAD=libnss_wrapper.so NSS_WRAPPER_PASSWD=/app/passwd NSS_WRAPPER_GROUP=/app/group '
+SLURM_SSH_COMMAND =   '/usr/bin/ssh  -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ' + \
                   global_settings.SLURM_SSH_KEY + ' ' + \
                   global_settings.SLURM_USERNAME + '@'
 
@@ -61,9 +62,11 @@ class SlurmJobManager(object):
         """
         Setup job manager
         """
-        self._mutex = Lock()
+
 
     def schedule(self, session, job_information, auth_token=None):
+        log.info(1,'entering schedule')
+
         """
         Allocates a job and starts the rendering resource process. If successful, the session
         job_id is populated and the session status is set to SESSION_STATUS_STARTING
@@ -88,9 +91,13 @@ class SlurmJobManager(object):
         :return: A Json response containing on ok status or a description of the error
         """
         status = None
-        for cluster_node in global_settings.SLURM_HOSTS:
+
+        cluster_nodes = global_settings.SLURM_HOSTS
+        if job_information.cluster:
+            cluster_nodes = [job_information.cluster]
+        for cluster_node in cluster_nodes:
             try:
-                self._mutex.acquire()
+
                 session.status = SESSION_STATUS_SCHEDULING
                 session.cluster_node = cluster_node
                 session.save()
@@ -108,7 +115,7 @@ class SlurmJobManager(object):
 
                 error = process.communicate()[1]
                 if len(re.findall('Granted', error)) != 0:
-                    session.job_id = re.findall('\\d+', error)[0]
+                    session.job_id = re.findall('\\d{5,}', error)[0]
                     log.info(1, 'Allocated job ' + str(session.job_id) +
                              ' on cluster node ' + cluster_node)
                     session.status = SESSION_STATUS_SCHEDULED
@@ -124,12 +131,10 @@ class SlurmJobManager(object):
                     status = [400, response]
                 process.stdin.close()
             except OSError as e:
+                log.info(1, 'OS errror when executing ')
                 log.error(str(e))
                 response = json.dumps({'contents': str(e)})
                 status = [400, response]
-            finally:
-                if self._mutex.locked():
-                    self._mutex.release()
         return status
 
     def start(self, session, job_information):
@@ -141,7 +146,6 @@ class SlurmJobManager(object):
         :return: A Json response containing on ok status or a description of the error
         """
         try:
-            self._mutex.acquire()
             session.status = SESSION_STATUS_STARTING
             session.save()
 
@@ -150,8 +154,12 @@ class SlurmJobManager(object):
 
             # Modules
             full_command = '\'source /etc/profile &&  module purge && '
-            if rr_settings.modules is not None:
+            if rr_settings.modules is not None and job_information.modules == ''  :
                 values = rr_settings.modules.split()
+                for module in values:
+                    full_command += 'module load ' + module.strip() + ' && '
+            if job_information.modules != '':
+                values = job_information.modules.split()
                 for module in values:
                     full_command += 'module load ' + module.strip() + ' && '
 
@@ -161,6 +169,12 @@ class SlurmJobManager(object):
                 values += job_information.environment.split()
                 for variable in values:
                     full_command += variable + ' '
+            # Add a meaningful DEFLEC_ID variable if DEFLECT_HOST variable found.   
+            deflect_host_r = re.compile("DEFLECT_HOST=*")
+            if (len(list(filter(deflect_host_r.match, values))) > 0):
+                title = 'DEFLECT_ID=\\\"Application running at {}:{} . Number of nodes: {} \\\" '.format(session.http_host, session.http_port,
+                job_information.nb_nodes )
+                full_command += title
 
             # Command lines parameters
             rest_parameters = manager.RenderingResourceSettingsManager.format_rest_parameters(
@@ -178,10 +192,17 @@ class SlurmJobManager(object):
             # Output redirection
             full_command += ' > ' + self._file_name(session, settings.SLURM_OUT_FILE)
             full_command += ' 2> ' + self._file_name(session, settings.SLURM_ERR_FILE)
+            full_command += ' ;scancel ' + session.job_id
             full_command += '\''
 
-            command_line = Template(' "srun --jobid=$job_id /bin/bash -c $full_command"').\
-                substitute(job_id=session.job_id, full_command=full_command)
+
+            if job_information.nb_nodes > 1:
+                mpi_version = '--mpi=pmi2'
+            else:
+                mpi_version = ''
+
+            command_line = Template(' "srun $mpi_version --jobid=$job_id /bin/bash -c $full_command"').\
+                substitute(job_id=session.job_id, full_command=full_command, mpi_version=mpi_version)
 
             ssh_command = SLURM_SSH_COMMAND + session.cluster_node + command_line
 
@@ -189,21 +210,18 @@ class SlurmJobManager(object):
                              stderr=subprocess.PIPE)
 
             log.info(1, 'Connect to frontend machine with command: ' + ssh_command)
-
             if rr_settings.wait_until_running:
                 session.status = SESSION_STATUS_STARTING
             else:
                 session.status = SESSION_STATUS_RUNNING
             session.save()
-            response = json.dumps({'message': session.configuration_id + ' successfully started'})
+            response = json.dumps({'message': session.configuration_id + ' successfully started', 'host' : session.http_host,
+            'host_port' : session.http_port})
             return [200, response]
         except OSError as e:
             log.error(str(e))
             response = json.dumps({'contents': str(e)})
             return [400, response]
-        finally:
-            if self._mutex.locked():
-                self._mutex.release()
 
     def stop(self, session):
         """
@@ -213,7 +231,6 @@ class SlurmJobManager(object):
         """
         result = [500, 'Unexpected error']
         try:
-            self._mutex.acquire()
             # pylint: disable=E1101
             setting = \
                 manager.RenderingResourceSettings.objects.get(
@@ -238,9 +255,6 @@ class SlurmJobManager(object):
             log.error(msg)
             response = json.dumps({'contents': msg})
             result = [400, response]
-        finally:
-            if self._mutex.locked():
-                self._mutex.release()
         return result
 
     @staticmethod
@@ -288,7 +302,7 @@ class SlurmJobManager(object):
             domain = self._get_domain(session)
             if domain == 'cscs.ch':
                 return hostname + '.bbp.epfl.ch'
-            elif domain == 'epfl.ch':
+            elif domain == '.bbp.epfl.ch':
                 hostname = hostname + '.' + domain
         return hostname
 
@@ -355,11 +369,6 @@ class SlurmJobManager(object):
         :param extension: file extension (typically err or out)
         :return: A string containing the error log
         """
-        domain = self._get_domain(session)
-        if domain == 'epfl.ch':
-            return settings.SLURM_OUTPUT_PREFIX_NFS + '_' + str(session.job_id) + \
-                   '_' + session.configuration_id + '_' + extension
-
         return settings.SLURM_OUTPUT_PREFIX + '_' + str(session.job_id) + \
            '_' + session.configuration_id + '_' + extension
 
@@ -421,10 +430,11 @@ class SlurmJobManager(object):
         if value != 0:
             options += ' -N ' + str(value)
 
-        value = rr_settings.nb_cpus
+        # value = rr_settings.nb_cpus
         if job_information.nb_cpus != 0:
             value = job_information.nb_cpus
-        options += ' -c ' + str(value)
+            options += ' -c ' + str(value)
+
 
         value = rr_settings.nb_gpus
         if job_information.nb_gpus != 0:
@@ -447,18 +457,29 @@ class SlurmJobManager(object):
             options += ' --reservation=' + job_information.reservation
 
         allocation_time = global_settings.SLURM_DEFAULT_TIME
-        if job_information.allocation_time != '':
+        if job_information.allocation_time:
             allocation_time = job_information.allocation_time
+
+
+        if job_information.constraint != '':
+            constraint = job_information.constraint
 
         log.info(1, 'Scheduling job for session ' + session.id)
 
         job_name = session.owner + '_' + rr_settings.id
         command_line = SLURM_SSH_COMMAND + session.cluster_node + \
-                       ' salloc --no-shell' + \
-                       ' --immediate=' + str(settings.SLURM_ALLOCATION_TIMEOUT) + \
+                       ' "salloc --no-shell' +  \
                        ' --account=' + rr_settings.project + \
-                       ' --job-name=' + job_name + \
-                       ' --time=' + allocation_time + \
-                       options
-        log.info(1, command_line)
+                        ' --immediate=' + str(settings.SLURM_ALLOCATION_TIMEOUT) + \
+                        ' --job-name=' + job_name + \
+                       ' --time=' +  str(allocation_time)
+        if constraint:
+            command_line += ' --constraint=' + constraint
+        command_line += options
+        command_line += '"'
+
+        log.info(1, 'constraint ' +  command_line)
+
+        log.info(1, 'COMMAND line ' +  command_line)
         return command_line
+

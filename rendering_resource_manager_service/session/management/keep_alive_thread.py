@@ -39,7 +39,7 @@ import process_manager
 
 
 # Delay after which a session is closed if no keep-alive message is received (in seconds)
-KEEP_ALIVE_TIMEOUT = 300
+KEEP_ALIVE_TIMEOUT = 3600
 
 # Frequency at which the keep-alive messages are checked
 KEEP_ALIVE_FREQUENCY = 120

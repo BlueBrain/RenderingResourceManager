@@ -1,45 +1,48 @@
 # In case of insufficient resources on OpenShift,
 # check https://bbpteam.epfl.ch/project/spaces/display/INFRA/OpenShift#OpenShift-OpenShiftbuildsexitswitherrorcode137.
 
-FROM alpine
+FROM ubuntu
 WORKDIR /app
+
+RUN apt update && apt  -y install openssh-client make python-pip git \
+bash python-dev gcc libc-dev libnss-wrapper gettext-base vim iputils-ping telnet
+#postgresql-dev && \
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt install -y tzdata  && ln -fs /usr/share/zoneinfo/Europe/Zurich /etc/localtime && dpkg-reconfigure --frontend noninteractive tzdata
 ADD . /app
 
-RUN apk update && apk add openssh make py-pip git \
-bash python2-dev gcc libc-dev \
-postgresql-dev supervisor && \
-pip install virtualenv
+RUN useradd -g 0 -ms /bin/bash bbpvizsoa 
 
-RUN ["/bin/bash", "-c", "source platform_venv/bin/activate && pip install -r requirements.txt && export PYTHONPATH=$PWD:$PYTHONPATH"]
-RUN ["/bin/bash", "-c", "chmod 700 ssh-privatekey"]
-RUN ["/bin/bash", "-c", "/usr/bin/make virtualenv"]
+ENV LD_PRELOAD=libnss_wrapper.so
+ENV NSS_WRAPPER_PASSWD=/app/passwd
+ENV NSS_WRAPPER_GROUP=/app/group
 
-ENV SLURM_SSH_KEY=/app/slurm-ssh-key
-
-ENV SLURM_HOSTS=['bbpviz1.cscs.ch']
-ENV SLURM_PROJECT=TEST
-ENV SLURM_USERNAME=bbpvizsoa
-ENV SLURM_SSH_KEY=/app/slurm-ssh-key
-ENV SLURM_DEFAULT_TIME=2
-ENV SLURM_DEFAULT_QUEUE=2
-
-ENV DB_NAME=vizdemos_dev
-ENV DB_HOST=bbpdbsrv06.bbp.epfl.ch
-ENV DB_PORT=5432
-ENV DB_USER=vizdemos_dev
-ENV RRM_VERSION=1
-ENV RRM_SERVICE_PORT=8383
+RUN mkdir /.ssh
+RUN chmod 766 /.ssh
+RUN chmod 777 /app/
 
 RUN mkdir /var/tmp/django_cache
 
-RUN cd rendering_resource_manager_service && pwd
+COPY passwd.template /app/passwd.template
+COPY group /app/group
+RUN touch /app/passwd && chmod 777 /app/passwd 
 
+
+RUN pip install virtualenv 
+RUN ["/bin/bash", "-c", "/usr/bin/make virtualenv"]
+RUN ["/bin/bash", "-c", "source platform_venv/bin/activate && pip install -r requirements.txt && export PYTHONPATH=$PWD:$PYTHONPATH"]
 ENV DOCKER_FILES=./rendering_resource_manager_service/deployment/docker
 COPY $DOCKER_FILES/local_settings.py /app/rendering_resource_manager_service/
 COPY $DOCKER_FILES/gunicorn.sh /app/
-RUN chmod +x /app/gunicorn.sh
+
+RUN chmod 777 /app/gunicorn.sh
 
 ## Ports
 EXPOSE 8383
 
+#ENV TZ=Europe/Zurich
+#RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
+
+#USER bbpvizsoa
 CMD /app/gunicorn.sh

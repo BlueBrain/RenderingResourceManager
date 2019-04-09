@@ -79,7 +79,7 @@ class SystemGlobalSettings(models.Model):
 
     id = models.IntegerField(primary_key=True, default=0)
     session_creation = models.BooleanField(default=True)
-    session_keep_alive_timeout = models.IntegerField(default=300)
+    session_keep_alive_timeout = models.IntegerField(default=7260)
 
     class Meta(object):
         """
