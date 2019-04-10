@@ -14,35 +14,31 @@ ADD . /app
 
 RUN useradd -g 0 -ms /bin/bash bbpvizsoa 
 
-ENV LD_PRELOAD=libnss_wrapper.so
+# ENV LD_PRELOAD=libnss_wrapper.so
+ENV LD_PRELOAD=/usr/lib/libnss_wrapper.so
 ENV NSS_WRAPPER_PASSWD=/app/passwd
 ENV NSS_WRAPPER_GROUP=/app/group
 
-RUN mkdir /.ssh
-RUN chmod 766 /.ssh
-RUN chmod 777 /app/
 
-RUN mkdir /var/tmp/django_cache
+RUN mkdir /.ssh &&  chmod 766 /.ssh && chmod 777 /app/ && mkdir /var/tmp/django_cache
 
-COPY passwd.template /app/passwd.template
-COPY group /app/group
+
+ENV DOCKER_FILES=./rendering_resource_manager_service/deployment/docker
+
+COPY $DOCKER_FILES/passwd.template /app/passwd.template
+COPY $DOCKER_FILES/group.template /app/group
 RUN touch /app/passwd && chmod 777 /app/passwd 
-
 
 RUN pip install virtualenv 
 RUN ["/bin/bash", "-c", "/usr/bin/make virtualenv"]
 RUN ["/bin/bash", "-c", "source platform_venv/bin/activate && pip install -r requirements.txt && export PYTHONPATH=$PWD:$PYTHONPATH"]
-ENV DOCKER_FILES=./rendering_resource_manager_service/deployment/docker
-COPY $DOCKER_FILES/local_settings.py /app/rendering_resource_manager_service/
+
+COPY $DOCKER_FILES/local_settings.py /app/rendering_resource_manager_service/ 
 COPY $DOCKER_FILES/gunicorn.sh /app/
 
-RUN chmod 777 /app/gunicorn.sh
-
+RUN chmod 777 gunicorn.sh
 ## Ports
 EXPOSE 8383
 
-#ENV TZ=Europe/Zurich
-#RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
 #USER bbpvizsoa
-CMD /app/gunicorn.sh
+CMD ./gunicorn.sh
