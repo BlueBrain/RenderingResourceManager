@@ -45,7 +45,7 @@ APPLICATION_NAME = 'rendering-resource-manager'
 API_VERSION = 'v1'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = False
+DEBUG = True
 
 TEMPLATE_DEBUG = False
 
@@ -112,12 +112,12 @@ WSGI_APPLICATION = 'rendering_resource_manager_service.service.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql_psycopg2',
-        'NAME': 'vizdemos_dev',
-        'USER': 'vizdemos_dev',
-        'HOST': 'bbpdbsrv06.bbp.epfl.ch',
-        'PORT': '5432',
-	'PASSWORD': 'ieBuoMeece9l',
+        'ENGINE': 'TO_BE_MODIFIED',
+        'NAME': 'TO_BE_MODIFIED',
+        'USER': 'TO_BE_MODIFIED',
+        'HOST': 'TO_BE_MODIFIED',
+        'PORT': 'TO_BE_MODIFIED',
+	    'PASSWORD': 'TO_BE_MODIFIED',
     }
 }
 
@@ -139,7 +139,7 @@ USE_I18N = True
 
 USE_L10N = True
 
-USE_TZ = True
+USE_TZ = False
 
 
 # Static files (CSS, JavaScript, Images)
@@ -190,7 +190,6 @@ SLURM_PROJECT = 'proj3'
 SLURM_HOSTS = ['bbpviz1.epfl.ch']
 SLURM_DEFAULT_QUEUE = 'interactive'
 SLURM_DEFAULT_TIME = 30
-SLURM_ALLOCATION_TIMEOUT = os.environ['SLURM_ALLOCATION_TIMEOUT']
 
 
 # Unicore

@@ -209,7 +209,7 @@ class SlurmJobManager(object):
             subprocess.Popen([ssh_command], shell=True, stdout=subprocess.PIPE,
                              stderr=subprocess.PIPE)
 
-            log.info(1, 'Connect to frontend machine with command: ' + ssh_command)
+            log.info(1, 'Launching job with: ' + ssh_command)
             if rr_settings.wait_until_running:
                 session.status = SESSION_STATUS_STARTING
             else:
@@ -248,7 +248,8 @@ class SlurmJobManager(object):
                     r.close()
                 # pylint: disable=W0702
                 except requests.exceptions.RequestException as e:
-                    log.error(traceback.format_exc(e))
+                    log.error(e.message)
+                    log.debug(1, traceback.format_exc(e))
             result = self.kill(session)
         except OSError as e:
             msg = str(e)
@@ -478,8 +479,7 @@ class SlurmJobManager(object):
         command_line += options
         command_line += '"'
 
-        log.info(1, 'constraint ' +  command_line)
+        log.info(1, 'Allocation command: ' +  command_line)
 
-        log.info(1, 'COMMAND line ' +  command_line)
         return command_line
 

@@ -459,7 +459,8 @@ class SessionManager(object):
             session.valid_until = datetime.datetime.now() + \
                 datetime.timedelta(seconds=sgs.session_keep_alive_timeout)
             session.save()
-            msg = 'Session ' + str(session_id) + ' successfully updated'
+            log.info(1, 'Session ' + str(session_id) + ' valid_until has been updated to: ' + str(session.valid_until))
+            msg = 'Session ' + str(session_id) + ' valid_until successfully updated to: ' + str(session.valid_until)
             return [http_status.HTTP_200_OK, msg]
         except Session.DoesNotExist as e:
             log.error(str(e))

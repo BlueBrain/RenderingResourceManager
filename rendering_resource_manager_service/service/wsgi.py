@@ -31,6 +31,7 @@ https://docs.djangoproject.com/en/1.7/howto/deployment/wsgi/
 """
 
 from django.core.wsgi import get_wsgi_application
+import rendering_resource_manager_service.session.management.session_manager as session_manager
 from rendering_resource_manager_service.session.management import keep_alive_thread
 from rendering_resource_manager_service.session.models import Session
 
