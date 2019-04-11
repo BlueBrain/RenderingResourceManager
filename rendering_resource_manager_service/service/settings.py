@@ -117,7 +117,7 @@ DATABASES = {
         'USER': 'TO_BE_MODIFIED',
         'HOST': 'TO_BE_MODIFIED',
         'PORT': 'TO_BE_MODIFIED',
-	    'PASSWORD': 'TO_BE_MODIFIED',
+        'PASSWORD': 'TO_BE_MODIFIED',
     }
 }
 
@@ -210,10 +210,12 @@ IMAGE_STREAMING_SERVICE_URL = 'TO_BE_MODIFIED'
 REQUEST_TIMEOUT = 5
 
 try:
-    from local_settings import * # pylint: disable=F0401,W0403,W0401,W0614
+    from local_settings import *  # pylint: disable=F0401,W0403,W0401,W0614
 except ImportError as e:
     pass
 
+SSH_COMMNAND = '/usr/bin/ssh'
+SSH_ENV = ''
 # Static files
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [

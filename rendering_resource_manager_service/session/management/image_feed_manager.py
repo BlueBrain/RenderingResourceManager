@@ -27,20 +27,22 @@ The job manager is in charge of managing slurm jobs.
 
 # pylint: disable=W0403
 # pylint: disable=E1101
+# pylint: disable=E1103
 import requests
 import json
-import rendering_resource_manager_service.service.settings as settings
+import rendering_resource_manager_service.service.settings \
+    as settings
 from rendering_resource_manager_service.session.models import Session
 import rendering_resource_manager_service.utils.custom_logging as log
-from rendering_resource_manager_service.session.management.session_manager_settings \
-    import COOKIE_ID
+from rendering_resource_manager_service.session.management.\
+    session_manager_settings import COOKIE_ID
 
 
 class ImageFeedManager(object):
     """
-    Image feed manager. Establishes the connection to the Image Streaming Service and
-    manages the routes for the different sessions held by the Rendering Resource
-    Manager service.
+    Image feed manager. Establishes the connection to the Image Streaming
+    Service and manages the routes for the different sessions held by the
+    Rendering Resource Manager service.
     """
     def __init__(self, session_id):
         self._session_id = session_id
@@ -55,15 +57,15 @@ class ImageFeedManager(object):
 
     def add_route(self):
         """
-        Invokes the image streaming service for the creation of a new route for the
-        current session
+        Invokes the image streaming service for the creation of a new
+        route for the current session
         """
         return self.__do_request('POST', self.__get_uri())
 
     def remove_route(self):
         """
-        Invokes the image streaming service for the removal of an  existing route for the
-        current session
+        Invokes the image streaming service for the removal
+        of an  existing route for the current session
         """
         return self.__do_request('DELETE', '')
 
@@ -79,19 +81,22 @@ class ImageFeedManager(object):
             return status
         elif status[0] == 404:
             # Create new route
-            log.error('Route does not exist for session ' + str(self._session_id) +
+            log.error('Route does not exist for session ' +
+                      str(self._session_id) +
                       ', creating it with ' + str(self.__get_uri()))
             status = self.add_route()
             if status[0] == 201:
                 return self.__do_request('GET', '')
             else:
-                response = 'Image streaming service (' + settings.IMAGE_STREAMING_SERVICE_URL + \
-                           ') failed to create new route: ' + str(status[1])
+                response = 'Image streaming service (' + \
+                    settings.IMAGE_STREAMING_SERVICE_URL + \
+                    ') failed to create new route: ' + str(status[1])
                 log.error(response)
                 return [400, response]
         else:
-            response = 'Image streaming service (' + settings.IMAGE_STREAMING_SERVICE_URL + \
-                       ') is unreachable: ' + str(status[1])
+            response = 'Image streaming service (' + \
+                settings.IMAGE_STREAMING_SERVICE_URL + \
+                ') is unreachable: ' + str(status[1])
             log.error(response)
             return [400, response]
 

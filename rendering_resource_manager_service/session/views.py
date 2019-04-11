@@ -42,10 +42,12 @@ import rendering_resource_manager_service.utils.custom_logging as log
 import rendering_resource_manager_service.utils.tools as tools
 from rendering_resource_manager_service.session.models import Session
 from rendering_resource_manager_service.session.management import job_manager
-from rendering_resource_manager_service.session.management import process_manager
+from rendering_resource_manager_service.session.management \
+    import process_manager
 import management.session_manager as session_manager
 from rendering_resource_manager_service.session.models import \
-    SESSION_STATUS_GETTING_HOSTNAME, SESSION_STATUS_SCHEDULED, SESSION_STATUS_STARTING
+    SESSION_STATUS_GETTING_HOSTNAME, SESSION_STATUS_SCHEDULED, \
+    SESSION_STATUS_STARTING
 
 
 class SessionSerializer(serializers.ModelSerializer):
@@ -264,7 +266,7 @@ class CommandViewSet(viewsets.ModelViewSet):
             return response
         except (KeyError, TypeError) as e:
             log.debug(1, str(traceback.format_exc(e)))
-            response = json.dumps({'contents': 'Cookie is missing ' +  str(traceback.format_exc(e)) })
+            response = json.dumps({'contents': 'Cookie is missing ' + str(traceback.format_exc(e))})
             return HttpResponse(status=404, content=response)
         except Session.DoesNotExist as e:
             log.debug(1, str(traceback.format_exc(e)))
@@ -286,9 +288,10 @@ class CommandViewSet(viewsets.ModelViewSet):
         """
         Starts a rendering resource by scheduling a slurm job
         :param : session: Session holding the rendering resource
-        :param : request: HTTP request with a body containing a JSON representation of the job
-                 parameters
-        :rtype : An HTTP response containing the status and description of the command
+        :param : request: HTTP request with a body containing a JSON
+                 representation of the job parameters
+        :rtype : An HTTP response containing the status and description of
+                 the command
         """
 
         log.info(1, '__Schedule ')
@@ -315,16 +318,18 @@ class CommandViewSet(viewsets.ModelViewSet):
         # status = job_manager.globalJobManager.schedule(session, job_information, auth_token)
         status = job_manager.globalJobManager.schedule(session, job_information, auth_token)
 
-        return HttpResponse(status=status[0], content=status[1],  content_type="application/json" )
+        return HttpResponse(status=status[0], content=status[1],
+                            content_type="application/json")
 
     @classmethod
     def __open_process(cls, session, request):
         """
         Starts a local rendering resource process
         :param : session: Session holding the rendering resource
-        :param : request: HTTP request with a body containing a JSON representation of the process
-                 parameters
-        :rtype : An HTTP response containing the status and description of the command
+        :param : request: HTTP request with a body containing a JSON
+                 representation of the process parameters
+        :rtype : An HTTP response containing the status and description of
+                 the command
         """
         parameters = ''
         try:

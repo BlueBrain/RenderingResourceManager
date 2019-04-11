@@ -359,7 +359,7 @@ class UnicoreJobManager(object):
             if not rr_settings.wait_until_running:
                 session.status = SESSION_STATUS_RUNNING
                 session.save()
-            response = json.dumps({'message': session.configuration_id + ' successfully started'} )
+            response = json.dumps({'message': session.configuration_id + ' successfully started'})
             return [200, response]
         except RuntimeError as e:
             log.error(str(e))
