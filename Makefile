@@ -20,7 +20,7 @@ PYTHON_PIP_VERSION=pip==9.0.1
 ##### DO NOT MODIFY BELOW #####################
 
 ifndef CI_DIR
-CI_REPO?=ssh://bbpvizuser@bbpcode.epfl.ch/platform/ContinuousIntegration.git
+CI_REPO?=ssh://bbpcode.epfl.ch/platform/ContinuousIntegration.git
 CI_DIR?=ContinuousIntegration
 
 FETCH_CI := $(shell \
