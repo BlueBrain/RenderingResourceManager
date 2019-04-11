@@ -112,8 +112,9 @@ WSGI_APPLICATION = 'rendering_resource_manager_service.service.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'TO_BE_MODIFIED',
-        'NAME': 'TO_BE_MODIFIED',
+        'ENGINE': 'django.db.backends.sqlite3',
+        'OPTIONS': {'timeout': 20},
+        'NAME': os.path.join(BASE_DIR + '/tests', 'db.sqlite3'),
         'USER': 'TO_BE_MODIFIED',
         'HOST': 'TO_BE_MODIFIED',
         'PORT': 'TO_BE_MODIFIED',
