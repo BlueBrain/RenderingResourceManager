@@ -1,0 +1,4 @@
+./deps
+./Dockerfile
+./.dockerignore
+./platform_venv

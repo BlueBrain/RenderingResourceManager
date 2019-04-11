@@ -47,9 +47,9 @@ session_command = CommandViewSet.as_view({
 
 urlpatterns = patterns(
     '',
-    url(r'/session/$', session_list),
-    url(r'/session/(?P<pk>[a-zA-Z0-9]+)/$', session_details),
-    url(r'/session/(?P<command>[a-zA-Z0-9]+)', session_command),
+    url(r'session/$', session_list),
+    url(r'session/(?P<pk>[a-zA-Z0-9]+)/$', session_details),
+    url(r'session/(?P<command>[a-zA-Z0-9]+)', session_command),
 )
 
 urlpatterns = format_suffix_patterns(urlpatterns)

@@ -30,19 +30,26 @@ starts the web server application.
 import threading
 import time
 import datetime
-
+import json
 from django.db import transaction
 import rendering_resource_manager_service.utils.custom_logging as log
-from rendering_resource_manager_service.session.models import SESSION_STATUS_STOPPING
+from rendering_resource_manager_service.session.models \
+    import SESSION_STATUS_STOPPING, SESSION_STATUS_RUNNING
+import session_manager
+
+import rest_framework.status as http_status
+
+
 import job_manager
 import process_manager
 
 
 # Delay after which a session is closed if no keep-alive message is received (in seconds)
-KEEP_ALIVE_TIMEOUT = 300
+# Applied only if SystemGlobalSettings does not exist in a database
+KEEP_ALIVE_TIMEOUT = 600
 
 # Frequency at which the keep-alive messages are checked
-KEEP_ALIVE_FREQUENCY = 120
+KEEP_ALIVE_FREQUENCY = 30
 
 
 class KeepAliveThread(threading.Thread):
@@ -57,12 +64,20 @@ class KeepAliveThread(threading.Thread):
 
     def run(self):
         """
-        Checks for active sessions. If no keep-alive message was received in the last
-        n seconds, the session is closed.
+        Checks for active sessions. If no keep-alive message was received in
+        the last n seconds, the session is closed.
         """
         while self.signal:
             log.info(1, 'Checking for inactive sessions')
             for session in self.sessions.all():
+                sm = session_manager.SessionManager()
+                status = sm.query_status(session.id)
+                log.debug(1, 'Keep alive thread querying session status of: ' +
+                          str(session.id))
+                if status[0] == http_status.HTTP_200_OK and \
+                        json.loads(status[1])['code'] == \
+                        SESSION_STATUS_RUNNING:
+                    sm.keep_alive_session(session.id)
                 log.info(1, 'Session ' + str(session.id) +
                          ' is valid until ' + str(session.valid_until))
                 if datetime.datetime.now() > session.valid_until:

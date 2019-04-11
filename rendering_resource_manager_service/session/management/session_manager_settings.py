@@ -26,7 +26,7 @@ This module contains the global constants for the rendering resource manager
 """
 
 import rendering_resource_manager_service.service.settings as global_settings
-
+import os
 
 # HTTP Cookie ID
 COOKIE_ID = "HBP"
@@ -63,7 +63,7 @@ SLURM_OUTPUT_PREFIX_NFS = '/home/' + global_settings.SLURM_USERNAME +\
 
 SLURM_ERR_FILE = 'err.log'
 SLURM_OUT_FILE = 'out.log'
-SLURM_ALLOCATION_TIMEOUT = 10
+SLURM_ALLOCATION_TIMEOUT = os.environ['SLURM_ALLOCATION_TIMEOUT']
 
 # Session management
 RRM_SPECIFIC_COMMAND_KEEPALIVE = 'keepalive'

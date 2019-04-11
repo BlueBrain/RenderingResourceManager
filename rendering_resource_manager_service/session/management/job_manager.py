@@ -55,8 +55,11 @@ class JobInformation(object):
         self.nb_gpus = 0
         self.nb_nodes = 0
         self.memory = 0
+        self.modules = ''
         self.queue = ''
-        self.allocation_time = ''
+        self.allocation_time = 0
+        self.constraint = ''
+        self.cluster = ''
         # self.work_dir = None
         self.job = None
 

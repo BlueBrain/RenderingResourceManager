@@ -115,6 +115,10 @@ DATABASES = {
         'ENGINE': 'django.db.backends.sqlite3',
         'OPTIONS': {'timeout': 20},
         'NAME': os.path.join(BASE_DIR + '/tests', 'db.sqlite3'),
+        'USER': 'TO_BE_MODIFIED',
+        'HOST': 'TO_BE_MODIFIED',
+        'PORT': 'TO_BE_MODIFIED',
+        'PASSWORD': 'TO_BE_MODIFIED',
     }
 }
 
@@ -130,7 +134,7 @@ CACHES = {
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Europe/Zurich'
 
 USE_I18N = True
 
@@ -166,7 +170,8 @@ SWAGGER_SETTINGS = {
 }
 
 # Base URL prefix
-BASE_URL_PREFIX = r'^' + APPLICATION_NAME + '/' + API_VERSION
+# BASE_URL_PREFIX = r'^' + APPLICATION_NAME + '/' + API_VERSION
+BASE_URL_PREFIX = ''
 
 # Needed by unit testing
 sys.path.append(BASE_DIR)
@@ -175,17 +180,21 @@ sys.path.append(BASE_DIR + '/rendering_resource_manager_service')
 # Job allocator
 RESOURCE_ALLOCATOR_SLURM = 'SLURM'
 RESOURCE_ALLOCATOR_UNICORE = 'UNICORE'
-RESOURCE_ALLOCATOR = RESOURCE_ALLOCATOR_UNICORE
+RESOURCE_ALLOCATOR = RESOURCE_ALLOCATOR_SLURM
 
 # Slurm (To be modified by deployment process)
-SLURM_USERNAME = 'TO_BE_MODIFIED'
-SLURM_SSH_KEY = 'TO_BE_MODIFIED'
-SLURM_PROJECT = 'TO_BE_MODIFIED'
-SLURM_HOSTS = ['TO_BE_MODIFIED']
-SLURM_DEFAULT_QUEUE = 'TO_BE_MODIFIED'
-SLURM_DEFAULT_TIME = 'TO_BE_MODIFIED'
+
+
+SLURM_USERNAME = 'bbpvizsoa'
+SLURM_SSH_KEY = '/home/podhajsk/security/vizsoa.key'
+SLURM_PROJECT = 'proj3'
+SLURM_HOSTS = ['bbpviz1.epfl.ch']
+SLURM_DEFAULT_QUEUE = 'interactive'
+SLURM_DEFAULT_TIME = 30
+
 
 # Unicore
+
 UNICORE_DEFAULT_REGISTRY_URL = 'TO_BE_MODIFIED'
 UNICORE_DEFAULT_SITE = 'TO_BE_MODIFIED'
 UNICORE_DEFAULT_HTTP_PROXIES = {
@@ -202,10 +211,12 @@ IMAGE_STREAMING_SERVICE_URL = 'TO_BE_MODIFIED'
 REQUEST_TIMEOUT = 5
 
 try:
-    from local_settings import * # pylint: disable=F0401,W0403,W0401,W0614
+    from local_settings import *  # pylint: disable=F0401,W0403,W0401,W0614
 except ImportError as e:
     pass
 
+SSH_COMMNAND = '/usr/bin/ssh'
+SSH_ENV = ''
 # Static files
 STATIC_URL = '/static/'
 STATICFILES_DIRS = [
