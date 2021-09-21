@@ -1,4 +1,5 @@
-#Rendering resource manager
+# Rendering resource manager
+
 A service managing rendering resources in order to allow visualization web services. This service is in charge of:
 - Keeping track of available Rendering Resources and their current state.
 - Accepting asynchronous work requests (image generation or encoding), and schedule them according to an algorithm.
@@ -12,7 +13,7 @@ A service managing rendering resources in order to allow visualization web servi
 To keep track of the changes between releases check the
 [changelog](doc/Changelog.md).
 
-##Installation
+## Installation
 Install python 2.6 or 2.7 , and virtualenv with apt-get and pip
 
 ### In the context of the Human Brain Project
@@ -79,3 +80,9 @@ Browse the REST API documentation by opening the following URL in your browser
 ```
 http://localhost:9000/rendering-resource-manager/v1/api-docs
 ```
+
+## Funding & Acknowledgment
+
+The development of this software was supported by funding to the Blue Brain Project, a research center of the École polytechnique fédérale de Lausanne (EPFL), from the Swiss government’s ETH Board of the Swiss Federal Institutes of Technology.
+
+Copyright (c) 2021 Blue Brain Project/EPFL
