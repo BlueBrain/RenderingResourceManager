@@ -1,5 +1,7 @@
 Cyrille Favreau
 Pawel Podhajski
-Juan Hernando
-Grigori Chevtchenko
-Ahmet Bilgili
+
+Ahmet Bilgili (contributor)
+Grigori Chevtchenko (contributor)
+Juan Bautista Hernando Vieites (contributor)
+Judit Planas Carbonell (contributor)
